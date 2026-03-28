@@ -23,3 +23,9 @@ data.db
 release
 /logs
 /data
+dist
+node_modules
+upload
+databases
+data
+backend/public
