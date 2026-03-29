@@ -2,7 +2,7 @@
 
 all: install build
 
-# 参数传递支持: make run ARGS="-port 3000 -data ./mydata"
+# 参数传递支持: make run ARGS="-port 3000 -data-dir ./mydata"
 ARGS ?=
 
 install:
@@ -45,12 +45,12 @@ release:
 
 help:
 	@echo "用法:"
-	@echo "  make build              构建项目 (生产版本)"
-	@echo "  make run                构建并运行 (生产模式)"
-	@echo "  make run ARGS=\"-port 3000\"    指定端口运行"
-	@echo "  make dev                开发模式 (前端热更新)"
-	@echo "  make release            构建发布包"
-	@echo "  make clean              清理构建文件"
+	@echo "  make build                          构建项目 (生产版本)"
+	@echo "  make run                            构建并运行 (生产模式)"
+	@echo "  make run ARGS=\"-port 3000\"            指定端口运行"
+	@echo "  make dev                            开发模式 (前端热更新)"
+	@echo "  make release                        构建发布包"
+	@echo "  make clean                          清理构建文件"
 	@echo ""
 	@echo "模式说明:"
 	@echo "  run  - 生产模式: 前端构建后打包，单端口访问"
@@ -60,10 +60,10 @@ help:
 	@echo "         后端: http://localhost:8080 (API)"
 	@echo ""
 	@echo "参数选项:"
-	@echo "  -port string     服务端口 (默认: 8080)"
-	@echo "  -data string     数据目录 (默认: ./data)"
-	@echo "  -public string   静态资源目录 (默认: ./public)"
-	@echo "  -upload string   上传目录 (默认: ./upload)"
+	@echo "  -port string           服务端口 (默认: 8080)"
+	@echo "  -data-dir string       数据目录 (默认: ./data)"
+	@echo "  -web-dir string        静态资源目录 (默认: ./public)"
+	@echo "  -upload-dir string     上传目录 (默认: ./upload)"
 
 clean:
 	rm -rf backend/sqlite-manager

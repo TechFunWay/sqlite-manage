@@ -31,7 +31,7 @@ func GetUploadDBDir(dateStr string) string {
 
 // GetSystemDBPath 获取系统数据库路径
 func GetSystemDBPath() string {
-	return filepath.Join(DataDir, "sqlite-manage.db")
+	return filepath.Join(DataDir, "db", "database.db")
 }
 
 // SetDirs 设置目录
