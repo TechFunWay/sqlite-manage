@@ -20,6 +20,7 @@ import (
 	"sqlite-manager/auth"
 	"sqlite-manager/config"
 	"sqlite-manager/handlers"
+	"sqlite-manager/telemetry"
 	"sqlite-manager/upgrade"
 	"sqlite-manager/utils"
 )
@@ -100,6 +101,11 @@ func main() {
 	if err := upgrade.RunUpgrade(); err != nil {
 		log.Printf("Warning: Upgrade failed: %v", err)
 	}
+
+	// 初始化并启动统计（静默，每60分钟上报一次）
+	telemetry.Init(AppVersion)
+	telemetry.Start()
+	defer telemetry.Stop()
 
 	// 启动服务器
 	startServer(shouldOpenBrowser)
@@ -309,17 +315,16 @@ func printHelp() {
   help             显示帮助信息
 
 选项:
-  -port string         服务端口 (默认: 8080，也可用 PORT 环境变量)
-  -data-dir string     数据目录 (默认: ./data，也可用 SQLITE_DATA_DIR 环境变量)
-  -web-dir string      静态资源目录 (默认: ./public，也可用 SQLITE_WEB_DIR 环境变量)
-  -upload-dir string   上传目录 (默认: ./upload，也可用 SQLITE_UPLOAD_DIR 环境变量)
-  -no-browser          不自动打开浏览器
+  -port string           服务端口 (默认: 8080，也可用 PORT 环境变量)
+  -data-dir string       数据目录 (默认: ./data，也可用 SQLITE_DATA_DIR 环境变量)
+  -web-dir string        静态资源目录 (默认: ./public，也可用 SQLITE_WEB_DIR 环境变量)
+  -upload-dir string     上传目录 (默认: ./upload，也可用 SQLITE_UPLOAD_DIR 环境变量)
+  -no-browser            不自动打开浏览器
 
 示例:
   sqlite-manager                                 # 使用默认配置启动
   sqlite-manager -port 3000                      # 指定端口 3000
   sqlite-manager -data-dir /var/lib/sqlite       # 指定数据目录
-  sqlite-manager -port 8080 -data-dir ./mydata   # 多个参数
 
 环境变量:
   PORT                 服务端口
