@@ -89,7 +89,7 @@ EOF
 ./start.sh -port 3000
 
 # 指定数据目录
-./start.sh -data /path/to/data
+./start.sh -data-dir /path/to/data
 
 # 查看所有参数
 ./start.sh help
@@ -99,16 +99,16 @@ EOF
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
 | -port | 服务端口 | 8080 |
-| -data | 数据目录 | ./data |
-| -public | 静态资源目录 | ./public |
-| -upload | 上传目录 | ./upload |
+| -data-dir | 数据目录 | ./data |
+| -web-dir | 静态资源目录 | ./public |
+| -upload-dir | 上传目录 | ./upload |
 
 ## 环境变量
 | 变量 | 说明 |
 |------|------|
 | PORT | 服务端口 |
 | SQLITE_DATA_DIR | 数据目录 |
-| SQLITE_PUBLIC_DIR | 静态资源目录 |
+| SQLITE_WEB_DIR | 静态资源目录 |
 | SQLITE_UPLOAD_DIR | 上传目录 |
 
 ## 子命令

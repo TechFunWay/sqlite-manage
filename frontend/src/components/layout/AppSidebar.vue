@@ -3,11 +3,14 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useDatabaseStore } from '../../stores/database'
 import { useToastStore } from '../../stores/toast'
 import { recentApi } from '../../api'
-import { Table as TableIcon, Search, Plus, Trash2, ChevronRight, HardDrive, Database, Loader2, Clock, X } from 'lucide-vue-next'
+import { 
+  Table as TableIcon, Search, Plus, Trash2, ChevronRight, ChevronDown, 
+  HardDrive, Database, Loader2, Clock, X, FolderOpen, FolderPlus 
+} from 'lucide-vue-next'
 import Button from '../common/Button.vue'
 import ConfirmDialog from '../common/ConfirmDialog.vue'
 
-const emit = defineEmits(['create-table', 'select-database'])
+const emit = defineEmits(['create-table', 'select-database', 'create-database'])
 
 const store = useDatabaseStore()
 const toast = useToastStore()
@@ -17,6 +20,7 @@ const showDeleteConfirm = ref(false)
 const tableToDelete = ref(null)
 const expandedDatabases = ref(new Set())
 const loadingDb = ref(null)
+const showMenu = ref(false)
 
 // Recent databases from backend
 const recentDatabases = ref([])
@@ -153,6 +157,16 @@ function formatPath(path) {
   return parts.length > 3 ? '...' + parts.slice(-2).join('/') : path
 }
 
+function handleOpenDatabase() {
+  showMenu.value = false
+  emit('select-database')
+}
+
+function handleCreateDatabase() {
+  showMenu.value = false
+  emit('create-database')
+}
+
 // Expose addToRecent for parent component
 defineExpose({ addToRecent, loadRecentDatabases })
 </script>
@@ -282,10 +296,38 @@ defineExpose({ addToRecent, loadRecentDatabases })
     </div>
 
     <div class="p-3 border-t border-slate-700 space-y-2">
-      <Button @click="emit('select-database')" size="small" fullWidth variant="secondary">
-        <HardDrive class="w-4 h-4" />
-        打开/新建数据库
-      </Button>
+      <!-- 打开/新建数据库按钮 -->
+      <div class="relative">
+        <Button @click="showMenu = !showMenu" size="small" fullWidth variant="secondary">
+          <HardDrive class="w-4 h-4" />
+          打开/新建数据库
+          <ChevronDown class="w-3 h-3 ml-auto transition-transform" :class="{ 'rotate-180': showMenu }" />
+        </Button>
+        
+        <!-- 下拉菜单 -->
+        <Transition name="dropdown">
+          <div 
+            v-if="showMenu" 
+            class="absolute bottom-full left-0 right-0 mb-1 bg-slate-700 rounded-lg border border-slate-600 shadow-xl overflow-hidden z-50"
+          >
+            <button
+              @click="handleOpenDatabase"
+              class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-600 transition-colors"
+            >
+              <FolderOpen class="w-4 h-4 text-primary-400" />
+              浏览/打开数据库
+            </button>
+            <button
+              @click="handleCreateDatabase"
+              class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-600 transition-colors"
+            >
+              <FolderPlus class="w-4 h-4 text-emerald-400" />
+              新建数据库
+            </button>
+          </div>
+        </Transition>
+      </div>
+      
       <Button @click="emit('create-table')" size="small" fullWidth :disabled="!store.databaseInfo">
         <Plus class="w-4 h-4" />
         新建表
@@ -302,3 +344,16 @@ defineExpose({ addToRecent, loadRecentDatabases })
     />
   </aside>
 </template>
+
+<style scoped>
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: all 0.15s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+</style>
