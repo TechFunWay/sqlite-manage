@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDatabaseStore } from '../stores/database'
 import { useToastStore } from '../stores/toast'
@@ -30,6 +30,13 @@ const showBrowseModal = ref(false)
 const showCreateModal = ref(false)
 const newDbName = ref('')
 const isDragging = ref(false)
+
+// 监听当前表变化，自动切换到数据Tab
+watch(() => store.currentTable, (newTable) => {
+  if (newTable) {
+    activeTab.value = 'data'
+  }
+})
 
 // File browser state
 const currentPath = ref('')
@@ -166,6 +173,7 @@ function formatSize(bytes) {
         ref="sidebarRef"
         @create-table="showCreateTable = true" 
         @select-database="openBrowseModal"
+        @create-database="openCreateModal"
       />
       
       <main class="flex-1 flex flex-col overflow-hidden">

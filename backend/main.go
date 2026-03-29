@@ -36,9 +36,9 @@ var (
 func main() {
 	// 解析命令行参数
 	port := flag.String("port", "", "服务端口 (默认: 8080)")
-	data := flag.String("data", "", "数据目录 (默认: ./data)")
-	public := flag.String("public", "", "静态资源目录 (默认: ./public)")
-	upload := flag.String("upload", "", "上传目录 (默认: ./upload)")
+	dataDir := flag.String("data-dir", "", "数据目录 (默认: ./data)")
+	webDir := flag.String("web-dir", "", "静态资源目录 (默认: ./public)")
+	uploadDir := flag.String("upload-dir", "", "上传目录 (默认: ./upload)")
 	noBrowser := flag.Bool("no-browser", false, "不自动打开浏览器")
 	flag.Parse()
 
@@ -46,7 +46,7 @@ func main() {
 	if len(os.Args) > 1 && !strings.HasPrefix(os.Args[1], "-") {
 		switch os.Args[1] {
 		case "reset-password":
-			parseConfig(port, data, public, upload)
+			parseConfig(port, dataDir, webDir, uploadDir)
 			initSystemDB()
 			resetPasswordCLI()
 			return
@@ -54,7 +54,7 @@ func main() {
 			fmt.Printf("SQLite Manager v%s\n", AppVersion)
 			return
 		case "upgrade-status":
-			parseConfig(port, data, public, upload)
+			parseConfig(port, dataDir, webDir, uploadDir)
 			initSystemDB()
 			showUpgradeStatus()
 			return
@@ -65,7 +65,7 @@ func main() {
 	}
 
 	// 解析配置
-	parseConfig(port, data, public, upload)
+	parseConfig(port, dataDir, webDir, uploadDir)
 
 	// 初始化时区
 	utils.InitTimezone()
@@ -106,7 +106,7 @@ func main() {
 }
 
 // parseConfig 解析配置
-func parseConfig(port, data, public, upload *string) {
+func parseConfig(port, dataDirParam, webDirParam, uploadDirParam *string) {
 	// 端口
 	if *port != "" {
 		serverPort = *port
@@ -120,45 +120,42 @@ func parseConfig(port, data, public, upload *string) {
 	execDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 
 	// 数据目录
-	dataDir := ""
-	if *data != "" {
-		dataDir, _ = filepath.Abs(*data)
+	dir := ""
+	if *dataDirParam != "" {
+		dir, _ = filepath.Abs(*dataDirParam)
 	} else if envData := os.Getenv("SQLITE_DATA_DIR"); envData != "" {
-		dataDir, _ = filepath.Abs(envData)
+		dir, _ = filepath.Abs(envData)
 	} else {
-		dataDir = filepath.Join(execDir, "data")
+		dir = filepath.Join(execDir, "data")
 	}
+	config.DataDir = dir
 
 	// 静态资源目录
-	publicDir := ""
-	if *public != "" {
-		publicDir, _ = filepath.Abs(*public)
-	} else if envPublic := os.Getenv("SQLITE_PUBLIC_DIR"); envPublic != "" {
-		publicDir, _ = filepath.Abs(envPublic)
+	if *webDirParam != "" {
+		dir, _ = filepath.Abs(*webDirParam)
+	} else if envWeb := os.Getenv("SQLITE_WEB_DIR"); envWeb != "" {
+		dir, _ = filepath.Abs(envWeb)
 	} else {
-		publicDir = filepath.Join(execDir, "public")
+		dir = filepath.Join(execDir, "public")
 	}
+	config.PublicDir = dir
 
 	// 上传目录
-	uploadDir := ""
-	if *upload != "" {
-		uploadDir, _ = filepath.Abs(*upload)
+	if *uploadDirParam != "" {
+		dir, _ = filepath.Abs(*uploadDirParam)
 	} else if envUpload := os.Getenv("SQLITE_UPLOAD_DIR"); envUpload != "" {
-		uploadDir, _ = filepath.Abs(envUpload)
+		dir, _ = filepath.Abs(envUpload)
 	} else {
-		uploadDir = filepath.Join(execDir, "upload")
+		dir = filepath.Join(execDir, "upload")
 	}
-
-	// 设置配置
-	config.SetDirs(dataDir, publicDir, uploadDir)
+	config.UploadDir = dir
 }
 
 // initSystemDB 初始化系统数据库
 func initSystemDB() error {
-	dataDir := config.GetDataDir()
-	os.MkdirAll(dataDir, 0755)
-
 	systemDBPath := config.GetSystemDBPath()
+	os.MkdirAll(filepath.Dir(systemDBPath), 0755)
+
 	var err error
 	systemDB, err = sql.Open("sqlite3", systemDBPath+"?_journal_mode=WAL")
 	if err != nil {
@@ -312,22 +309,22 @@ func printHelp() {
   help             显示帮助信息
 
 选项:
-  -port string       服务端口 (默认: 8080，也可用 PORT 环境变量)
-  -data string       数据目录 (默认: ./data，也可用 SQLITE_DATA_DIR 环境变量)
-  -public string     静态资源目录 (默认: ./public，也可用 SQLITE_PUBLIC_DIR 环境变量)
-  -upload string     上传目录 (默认: ./upload，也可用 SQLITE_UPLOAD_DIR 环境变量)
-  -no-browser        不自动打开浏览器
+  -port string         服务端口 (默认: 8080，也可用 PORT 环境变量)
+  -data-dir string     数据目录 (默认: ./data，也可用 SQLITE_DATA_DIR 环境变量)
+  -web-dir string      静态资源目录 (默认: ./public，也可用 SQLITE_WEB_DIR 环境变量)
+  -upload-dir string   上传目录 (默认: ./upload，也可用 SQLITE_UPLOAD_DIR 环境变量)
+  -no-browser          不自动打开浏览器
 
 示例:
-  sqlite-manager                           # 使用默认配置启动
-  sqlite-manager -port 3000                # 指定端口 3000
-  sqlite-manager -data /var/lib/sqlite     # 指定数据目录
-  sqlite-manager -port 8080 -data ./mydata # 多个参数
+  sqlite-manager                                 # 使用默认配置启动
+  sqlite-manager -port 3000                      # 指定端口 3000
+  sqlite-manager -data-dir /var/lib/sqlite       # 指定数据目录
+  sqlite-manager -port 8080 -data-dir ./mydata   # 多个参数
 
 环境变量:
   PORT                 服务端口
   SQLITE_DATA_DIR      数据目录
-  SQLITE_PUBLIC_DIR    静态资源目录
+  SQLITE_WEB_DIR       静态资源目录
   SQLITE_UPLOAD_DIR    上传目录
 `, AppVersion)
 }
