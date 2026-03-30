@@ -75,9 +75,6 @@ func main() {
 	// 保存打开浏览器标志
 	shouldOpenBrowser := !*noBrowser
 
-	log.Printf("SQLite Manager v%s starting...", AppVersion)
-	log.Printf("Current time (Beijing): %s", utils.GetBeijingTimeString())
-
 	// 设置共享目录
 	if *shareDirs != "" {
 		config.SetShareDirs(*shareDirs)
@@ -88,8 +85,20 @@ func main() {
 	// 自动检测飞牛存储卷
 	detectVolumes()
 
-	log.Printf("Config: data=%s, public=%s, upload=%s, share=%v, port=%s",
-		config.DataDir, config.PublicDir, config.UploadDir, config.ShareDirs, serverPort)
+	// 打印启动信息
+	log.Println("==========================================")
+	log.Printf("  SQLite Manager v%s", AppVersion)
+	log.Println("==========================================")
+	log.Printf("  时间: %s", utils.GetBeijingTimeString())
+	log.Printf("  端口: %s", serverPort)
+	log.Printf("  访问地址: http://localhost:%s", serverPort)
+	log.Printf("  数据目录: %s", config.DataDir)
+	log.Printf("  静态资源: %s", config.PublicDir)
+	log.Printf("  上传目录: %s", config.UploadDir)
+	log.Printf("  共享目录: %v", config.ShareDirs)
+	log.Printf("  系统数据库: %s", config.GetSystemDBPath())
+	log.Printf("  打开浏览器: %v", shouldOpenBrowser)
+	log.Println("==========================================")
 
 	// 初始化系统数据库
 	if err := initSystemDB(); err != nil {

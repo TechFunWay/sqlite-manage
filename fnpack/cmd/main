@@ -10,17 +10,18 @@ WEB_DIR="${TRIM_APPDEST}/www"
 
 # 共享目录 (飞牛环境变量)
 # TRIM_DATA_SHARE_PATHS 格式: /path/to/share1:/path/to/share2
-SHARE_DIRS="${TRIM_DATA_SHARE_PATHS}"
 
 # 确保目录存在
 mkdir -p "${DATA_DIR}" "${UPLOAD_DIR}"
 
 # write the command to start your program here
-CMD="cd ${TRIM_APPDEST}/server/ && ${TRIM_APPDEST}/server/sqlite-manager -port=${wizard_app_port} -web-dir=${WEB_DIR} -data-dir=${DATA_DIR} -upload-dir=${UPLOAD_DIR} -share-dirs="${SHARE_DIRS}
+CMD="cd ${TRIM_APPDEST}/server/ && ${TRIM_APPDEST}/server/sqlite-manager -port=${wizard_app_port}
+-web-dir=${WEB_DIR} -data-dir=${DATA_DIR} -upload-dir=${UPLOAD_DIR} -share-dirs="${TRIM_DATA_SHARE_PATHS}
 
 log_msg() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> ${LOG_FILE}
 }
+log_msg "共享目录：${TRIM_DATA_SHARE_PATHS}；共享目录2：${TRIM_DATA_SHARE_PATHS%%:*}"
 
 start_process() {
     if status; then
