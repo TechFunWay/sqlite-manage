@@ -1,12 +1,16 @@
 package config
 
-import "path/filepath"
+import (
+	"path/filepath"
+	"strings"
+)
 
 // 全局配置
 var (
 	DataDir   = "./data"
 	PublicDir = "./public"
 	UploadDir = "./upload"
+	ShareDirs = []string{} // 共享目录列表
 )
 
 // GetDataDir 获取数据目录
@@ -22,6 +26,28 @@ func GetPublicDir() string {
 // GetUploadDir 获取上传目录
 func GetUploadDir() string {
 	return UploadDir
+}
+
+// GetShareDirs 获取共享目录列表
+func GetShareDirs() []string {
+	return ShareDirs
+}
+
+// SetShareDirs 设置共享目录 (冒号分隔的路径)
+func SetShareDirs(dirs string) {
+	if dirs == "" {
+		ShareDirs = []string{}
+		return
+	}
+
+	parts := strings.Split(dirs, ":")
+	ShareDirs = []string{}
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			ShareDirs = append(ShareDirs, p)
+		}
+	}
 }
 
 // GetUploadDBDir 获取上传数据库目录（带日期子目录）

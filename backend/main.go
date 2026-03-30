@@ -16,7 +16,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 	"sqlite-manager/auth"
 	"sqlite-manager/config"
 	"sqlite-manager/handlers"
@@ -40,6 +40,7 @@ func main() {
 	dataDir := flag.String("data-dir", "", "数据目录 (默认: ./data)")
 	webDir := flag.String("web-dir", "", "静态资源目录 (默认: ./public)")
 	uploadDir := flag.String("upload-dir", "", "上传目录 (默认: ./upload)")
+	shareDirs := flag.String("share-dirs", "", "共享目录 (冒号分隔)")
 	noBrowser := flag.Bool("no-browser", false, "不自动打开浏览器")
 	flag.Parse()
 
@@ -76,8 +77,19 @@ func main() {
 
 	log.Printf("SQLite Manager v%s starting...", AppVersion)
 	log.Printf("Current time (Beijing): %s", utils.GetBeijingTimeString())
-	log.Printf("Config: data=%s, public=%s, upload=%s, port=%s",
-		config.DataDir, config.PublicDir, config.UploadDir, serverPort)
+
+	// 设置共享目录
+	if *shareDirs != "" {
+		config.SetShareDirs(*shareDirs)
+	} else if envShare := os.Getenv("TRIM_DATA_SHARE_PATHS"); envShare != "" {
+		config.SetShareDirs(envShare)
+	}
+
+	// 自动检测飞牛存储卷
+	detectVolumes()
+
+	log.Printf("Config: data=%s, public=%s, upload=%s, share=%v, port=%s",
+		config.DataDir, config.PublicDir, config.UploadDir, config.ShareDirs, serverPort)
 
 	// 初始化系统数据库
 	if err := initSystemDB(); err != nil {
@@ -119,7 +131,7 @@ func parseConfig(port, dataDirParam, webDirParam, uploadDirParam *string) {
 	} else if envPort := os.Getenv("PORT"); envPort != "" {
 		serverPort = envPort
 	} else {
-		serverPort = "8080"
+		serverPort = "8903"
 	}
 
 	// 获取可执行文件所在目录
@@ -157,13 +169,61 @@ func parseConfig(port, dataDirParam, webDirParam, uploadDirParam *string) {
 	config.UploadDir = dir
 }
 
+// detectVolumes 自动检测飞牛存储卷和共享目录
+func detectVolumes() {
+	// 如果已经有共享目录配置，跳过
+	if len(config.ShareDirs) > 0 {
+		return
+	}
+
+	var volumes []string
+
+	// 检测飞牛存储卷 (/vol1, /vol2, ...)
+	for i := 1; i <= 10; i++ {
+		volPath := fmt.Sprintf("/vol%d", i)
+		if info, err := os.Stat(volPath); err == nil && info.IsDir() {
+			volumes = append(volumes, volPath)
+		}
+	}
+
+	// 检测常见目录
+	commonDirs := []string{
+		"/mnt",
+		"/media",
+		"/share",
+		"/shares",
+	}
+
+	for _, dir := range commonDirs {
+		if info, err := os.Stat(dir); err == nil && info.IsDir() {
+			// 检查是否已添加
+			exists := false
+			for _, v := range volumes {
+				if v == dir {
+					exists = true
+					break
+				}
+			}
+			if !exists {
+				volumes = append(volumes, dir)
+			}
+		}
+	}
+
+	// 如果找到目录，设置为共享目录
+	if len(volumes) > 0 {
+		config.SetShareDirs(strings.Join(volumes, ":"))
+		log.Printf("Detected volumes: %v", volumes)
+	}
+}
+
 // initSystemDB 初始化系统数据库
 func initSystemDB() error {
 	systemDBPath := config.GetSystemDBPath()
 	os.MkdirAll(filepath.Dir(systemDBPath), 0755)
 
 	var err error
-	systemDB, err = sql.Open("sqlite3", systemDBPath+"?_journal_mode=WAL")
+	systemDB, err = sql.Open("sqlite", systemDBPath+"?_journal_mode=WAL")
 	if err != nil {
 		return err
 	}
@@ -225,6 +285,7 @@ func startServer(shouldOpenBrowser bool) {
 		protectedAPI.DELETE("/recent-databases", handlers.ClearRecentDatabases)
 
 		protectedAPI.GET("/files/browse", handlers.BrowseFiles)
+		protectedAPI.GET("/files/shares", handlers.GetShareDirs)
 
 		protectedAPI.POST("/database/open", handlers.OpenDatabase)
 		protectedAPI.POST("/database/create", handlers.CreateDatabase)

@@ -1,0 +1,7 @@
+{
+    "defaults": {
+        "run-as": "package"
+    },
+    "username": "techfunway-sqlite-manage",
+    "groupname": "techfunway-sqlite-manage"
+}

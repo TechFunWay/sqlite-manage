@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 type Database struct {
@@ -97,7 +97,7 @@ func Open(dbPath string) (*Database, error) {
 		return nil, fmt.Errorf("database file does not exist: %s", absPath)
 	}
 
-	db, err := sql.Open("sqlite3", absPath+"?_journal_mode=WAL&_foreign_keys=ON")
+	db, err := sql.Open("sqlite", absPath+"?_journal_mode=WAL&_foreign_keys=ON")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
@@ -144,7 +144,7 @@ func OpenOrCreate(dbPath string) (*Database, error) {
 		file.Close()
 	}
 
-	db, err := sql.Open("sqlite3", absPath+"?_journal_mode=WAL&_foreign_keys=ON")
+	db, err := sql.Open("sqlite", absPath+"?_journal_mode=WAL&_foreign_keys=ON")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
