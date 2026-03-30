@@ -42,6 +42,7 @@ watch(() => store.currentTable, (newTable) => {
 const currentPath = ref('')
 const parentPath = ref('')
 const fileList = ref([])
+const shareDirs = ref([])  // 共享目录列表
 const browsingLoading = ref(false)
 
 const tabs = [
@@ -73,11 +74,17 @@ async function browseDirectory(path) {
     currentPath.value = response.data.currentPath
     parentPath.value = response.data.parent
     fileList.value = response.data.files || []
+    shareDirs.value = response.data.shareDirs || []
   } catch (error) {
     toast.error(error.response?.data?.error || '无法访问目录')
   } finally {
     browsingLoading.value = false
   }
+}
+
+// 跳转到共享目录
+async function goToShare(sharePath) {
+  await browseDirectory(sharePath)
 }
 
 async function handleItemClick(file) {
@@ -271,6 +278,19 @@ function formatSize(bytes) {
     <!-- File Browser Modal -->
     <Modal :show="showBrowseModal" title="选择数据库文件" size="large" @close="showBrowseModal = false">
       <div class="space-y-4">
+        <!-- 共享目录快捷入口 -->
+        <div v-if="shareDirs.length > 0" class="flex flex-wrap gap-2">
+          <span class="text-xs text-slate-500 py-1">共享目录:</span>
+          <button
+            v-for="share in shareDirs"
+            :key="share.path"
+            @click="goToShare(share.path)"
+            class="px-2 py-1 text-xs bg-primary-500/20 text-primary-400 rounded hover:bg-primary-500/30 transition-colors"
+          >
+            {{ share.name }}
+          </button>
+        </div>
+
         <div class="flex items-center gap-2 p-3 bg-slate-700/30 rounded-lg">
           <Folder class="w-4 h-4 text-slate-500 flex-shrink-0" />
           <span class="text-sm text-slate-300 truncate font-mono" :title="currentPath">

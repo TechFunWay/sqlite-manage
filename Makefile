@@ -1,4 +1,4 @@
-.PHONY: all install backend frontend run dev build clean release help
+.PHONY: all install backend frontend run dev build clean release fnpack help
 
 all: install build
 
@@ -43,21 +43,27 @@ dev: backend
 release:
 	./release.sh
 
+fnpack:
+	./fnpack-build.sh
+
 help:
 	@echo "用法:"
 	@echo "  make build                          构建项目 (生产版本)"
 	@echo "  make run                            构建并运行 (生产模式)"
 	@echo "  make run ARGS=\"-port 3000\"            指定端口运行"
 	@echo "  make dev                            开发模式 (前端热更新)"
-	@echo "  make release                        构建发布包"
+	@echo "  make release                        构建发布包 (通用平台)"
+	@echo "  make fnpack                         打包飞牛 fnOS 应用"
 	@echo "  make clean                          清理构建文件"
 	@echo ""
 	@echo "模式说明:"
-	@echo "  run  - 生产模式: 前端构建后打包，单端口访问"
-	@echo "         访问: http://localhost:8080"
-	@echo "  dev  - 开发模式: 前端开发服务器+后端API"
-	@echo "         前端: http://localhost:5173 (修改自动刷新)"
-	@echo "         后端: http://localhost:8080 (API)"
+	@echo "  run     - 生产模式: 前端构建后打包，单端口访问"
+	@echo "            访问: http://localhost:8080"
+	@echo "  dev     - 开发模式: 前端开发服务器+后端API"
+	@echo "            前端: http://localhost:5173 (修改自动刷新)"
+	@echo "            后端: http://localhost:8080 (API)"
+	@echo "  release - 构建通用平台发布包 (mac/linux/win)"
+	@echo "  fnpack  - 打包飞牛 fnOS 应用 (arm/x86)"
 	@echo ""
 	@echo "参数选项:"
 	@echo "  -port string           服务端口 (默认: 8080)"

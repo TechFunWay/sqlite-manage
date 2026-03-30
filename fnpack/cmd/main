@@ -1,14 +1,28 @@
 #!/bin/bash
 
-LOG_FILE="${TRIM_DATA_SHARE_PATHS}/info.log"
-PID_FILE="${TRIM_DATA_SHARE_PATHS}/app.pid"
+LOG_FILE="${TRIM_PKGVAR}/info.log"
+PID_FILE="${TRIM_PKGVAR}/app.pid"
 
-# write the command to start your program here 
-CMD="cd ${TRIM_APPDEST}/server/ && ${TRIM_APPDEST}/server/sqlite-manager -port=${wizard_app_port} -dataUrl=${TRIM_DATA_SHARE_PATHS}/ -webDir=${TRIM_APPDEST}/www"
+# 数据目录
+DATA_DIR="${TRIM_PKGVAR}/data"
+UPLOAD_DIR="${TRIM_PKGVAR}/upload"
+WEB_DIR="${TRIM_APPDEST}/www"
+
+# 共享目录 (飞牛环境变量)
+# TRIM_DATA_SHARE_PATHS 格式: /path/to/share1:/path/to/share2
+SHARE_DIRS="${TRIM_DATA_SHARE_PATHS}"
+
+# 确保目录存在
+mkdir -p "${DATA_DIR}" "${UPLOAD_DIR}"
+
+# write the command to start your program here
+CMD="cd ${TRIM_APPDEST}/server/ && ${TRIM_APPDEST}/server/sqlite-manager -port=${wizard_app_port} -web-dir=${WEB_DIR} -data-dir=${DATA_DIR} -upload-dir=${UPLOAD_DIR} -share-dirs="${SHARE_DIRS}
 
 log_msg() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> ${LOG_FILE}
 }
+
+log_msg "CMD： ${CMD}"
 
 start_process() {
     if status; then
