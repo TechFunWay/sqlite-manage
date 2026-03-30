@@ -48,7 +48,8 @@ export const authApi = {
 }
 
 export const fileApi = {
-  browse: (path) => api.get('/files/browse', { params: { path } })
+  browse: (path) => api.get('/files/browse', { params: { path } }),
+  getShares: () => api.get('/files/shares')
 }
 
 export const recentApi = {
