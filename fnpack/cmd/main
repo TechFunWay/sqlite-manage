@@ -22,8 +22,6 @@ log_msg() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> ${LOG_FILE}
 }
 
-log_msg "CMD： ${CMD}"
-
 start_process() {
     if status; then
         return 0
