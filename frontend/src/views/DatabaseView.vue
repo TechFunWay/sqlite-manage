@@ -168,6 +168,15 @@ function formatSize(bytes) {
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
+
+function formatSharePath(path) {
+  if (!path) return ''
+  // 路径较长时，截断开头部分
+  if (path.length > 25) {
+    return '...' + path.slice(-22)
+  }
+  return path
+}
 </script>
 
 <template>
@@ -291,10 +300,29 @@ function formatSize(bytes) {
             variant="secondary" 
             @click="goToParent" 
             :disabled="!parentPath || browsingLoading"
+            class="whitespace-nowrap flex-shrink-0"
           >
             <ChevronLeft class="w-4 h-4" />
             上一级
           </Button>
+          
+          <!-- 共享目录下拉选择 -->
+          <select 
+            v-if="shareDirs.length > 0"
+            @change="goToShare($event.target.value); $event.target.selectedIndex = 0"
+            class="min-w-0 flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="" disabled selected>切换共享目录...</option>
+            <option 
+              v-for="share in shareDirs" 
+              :key="share.path" 
+              :value="share.path"
+              :title="share.path"
+              class="truncate"
+            >
+              {{ share.name }} ({{ formatSharePath(share.path) }})
+            </option>
+          </select>
         </div>
 
         <div class="border border-slate-700 rounded-lg overflow-hidden">
