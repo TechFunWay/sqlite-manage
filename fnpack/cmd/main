@@ -14,14 +14,32 @@ WEB_DIR="${TRIM_APPDEST}/www"
 # 确保目录存在
 mkdir -p "${DATA_DIR}" "${UPLOAD_DIR}"
 
+# 构建共享目录参数
+SHARE_DIRS_PARAM="${TRIM_DATA_SHARE_PATHS}"
+if [ -n "${TRIM_DATA_ACCESSIBLE_PATHS}" ]; then
+    if [ -n "${SHARE_DIRS_PARAM}" ]; then
+        SHARE_DIRS_PARAM="${SHARE_DIRS_PARAM}:${TRIM_DATA_ACCESSIBLE_PATHS}"
+    else
+        SHARE_DIRS_PARAM="${TRIM_DATA_ACCESSIBLE_PATHS}"
+    fi
+fi
+
 # write the command to start your program here
-CMD="cd ${TRIM_APPDEST}/server/ && ${TRIM_APPDEST}/server/sqlite-manager -port=${wizard_app_port}
--web-dir=${WEB_DIR} -data-dir=${DATA_DIR} -upload-dir=${UPLOAD_DIR} -share-dirs="${TRIM_DATA_SHARE_PATHS}
+CMD="cd ${TRIM_APPDEST}/server/ && ${TRIM_APPDEST}/server/sqlite-manager -port=${wizard_app_port} -web-dir=${WEB_DIR} -data-dir=${DATA_DIR} -upload-dir=${UPLOAD_DIR}"
+if [ -n "${SHARE_DIRS_PARAM}" ]; then
+    CMD="${CMD} -share-dirs=${SHARE_DIRS_PARAM}"
+fi
 
 log_msg() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> ${LOG_FILE}
 }
-log_msg "共享目录：${TRIM_DATA_SHARE_PATHS}；共享目录2：${TRIM_DATA_SHARE_PATHS%%:*}"
+
+log_msg "应用目录：${TRIM_APPDEST}；"
+log_msg "端口：${wizard_app_port}；"
+log_msg "web目录：${WEB_DIR}；"
+log_msg "数据目录：${DATA_DIR}；"
+log_msg "上传目录：${UPLOAD_DIR}；"
+log_msg "共享目录：${SHARE_DIRS_PARAM}；"
 
 start_process() {
     if status; then

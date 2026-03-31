@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -85,13 +86,20 @@ func main() {
 	// 自动检测飞牛存储卷
 	detectVolumes()
 
+	// 获取本机IP地址
+	localIPs := getLocalIPs()
+
 	// 打印启动信息
 	log.Println("==========================================")
 	log.Printf("  SQLite Manager v%s", AppVersion)
 	log.Println("==========================================")
 	log.Printf("  时间: %s", utils.GetBeijingTimeString())
 	log.Printf("  端口: %s", serverPort)
-	log.Printf("  访问地址: http://localhost:%s", serverPort)
+	log.Println("  访问地址:")
+	log.Printf("    http://localhost:%s", serverPort)
+	for _, ip := range localIPs {
+		log.Printf("    http://%s:%s", ip, serverPort)
+	}
 	log.Printf("  数据目录: %s", config.DataDir)
 	log.Printf("  静态资源: %s", config.PublicDir)
 	log.Printf("  上传目录: %s", config.UploadDir)
@@ -176,6 +184,45 @@ func parseConfig(port, dataDirParam, webDirParam, uploadDirParam *string) {
 		dir = filepath.Join(execDir, "upload")
 	}
 	config.UploadDir = dir
+}
+
+// getLocalIPs 获取本机所有非回环IP地址
+func getLocalIPs() []string {
+	var ips []string
+
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return ips
+	}
+
+	for _, iface := range interfaces {
+		// 跳过回环接口和未启用的接口
+		if iface.Flags&net.FlagLoopback != 0 || iface.Flags&net.FlagUp == 0 {
+			continue
+		}
+
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+
+			// 只保留IPv4地址
+			if ip != nil && ip.To4() != nil {
+				ips = append(ips, ip.String())
+			}
+		}
+	}
+
+	return ips
 }
 
 // detectVolumes 自动检测飞牛存储卷和共享目录
