@@ -38,6 +38,11 @@ watch(() => store.currentTable, (newTable) => {
   }
 })
 
+// 监听 store.activeTab 变化（用于"打开新数据库"按钮）
+watch(() => store.activeTab, (newTab) => {
+  activeTab.value = newTab
+})
+
 // File browser state
 const currentPath = ref('')
 const parentPath = ref('')

@@ -55,7 +55,10 @@ async function closeDb(db, event) {
 
 function goHome() {
   showDropdown.value = false
-  store.showDatabaseSelector()
+  // 清空当前表，显示欢迎页面
+  store.currentTable = null
+  store.currentSchema = null
+  store.currentData = null
 }
 
 function openChangePasswordModal() {
