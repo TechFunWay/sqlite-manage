@@ -1,15 +1,10 @@
 #!/bin/bash
 
-# ============================================================
-# 飞牛 fnOS 应用打包脚本
-# ============================================================
-
 set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
-# 从 Go 代码获取版本号
 VERSION=$(grep -o 'const Version = "[^"]*"' backend/upgrade/upgrade.go | cut -d'"' -f2)
 if [ -z "$VERSION" ]; then
     echo "❌ 无法获取版本号"
@@ -28,92 +23,133 @@ echo "🏷️  版本号: v${VERSION}"
 echo "📁 发布目录: ${RELEASE_DIR}"
 echo "============================================"
 
-# 备份原始 manifest
 cp "${FNPACK_DIR}/manifest" "${FNPACK_DIR}/manifest.bak"
-
-# 更新 manifest 版本号
-echo ""
-echo "📝 更新 manifest 版本号..."
 sed -i '' "s/^version.*/version               = ${VERSION}/" "${FNPACK_DIR}/manifest"
 
-# 编译前端
 echo ""
 echo "📦 编译前端..."
 cd frontend
 npm run build
 cd ..
 
-# 编译函数
-compile_and_pack() {
+mkdir -p "${RELEASE_DIR}"
+
+compile_platform() {
+    local GOOS=$1
+    local GOARCH=$2
+    local PLATFORM_LABEL=$3
+    
+    echo -n "  📦 ${PLATFORM_LABEL}... "
+    
+    local PLATFORM_DIR="${RELEASE_DIR}/${APP_NAME}-${PLATFORM_LABEL}"
+    rm -rf "${PLATFORM_DIR}" 2>/dev/null || true
+    mkdir -p "${PLATFORM_DIR}/www"
+    
+    cd backend
+    CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} \
+        go build -ldflags="-s -w" -o "../${PLATFORM_DIR}/sqlite-manager" . 2>/dev/null
+    cd ..
+    
+    if [ "${GOOS}" = "windows" ]; then
+        mv "${PLATFORM_DIR}/sqlite-manager" "${PLATFORM_DIR}/sqlite-manager.exe"
+    fi
+    
+    cp frontend/dist/index.html "${PLATFORM_DIR}/www/"
+    cp -r frontend/dist/sqlite-web "${PLATFORM_DIR}/www/"
+    
+    if [ "${GOOS}" = "windows" ]; then
+        cat > "${PLATFORM_DIR}/start.bat" << 'BATEOF'
+@echo off
+cd /d "%~dp0"
+sqlite-manager.exe %*
+BATEOF
+    else
+        cat > "${PLATFORM_DIR}/start.sh" << 'SHEOF'
+#!/bin/bash
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
+chmod +x sqlite-manager 2>/dev/null || true
+./sqlite-manager "$@"
+SHEOF
+        chmod +x "${PLATFORM_DIR}/start.sh"
+    fi
+    
+    echo "✅"
+}
+
+build_fnpack() {
     local GOARCH=$1
     local FNPLATFORM=$2
     local ARCH_LABEL=$3
     
-    echo ""
-    echo "🔨 编译 ${ARCH_LABEL} 版本 (GOARCH=${GOARCH}, platform=${FNPLATFORM})..."
+    echo -n "  📦 飞牛 ${ARCH_LABEL}.fpk... "
     
-    # 创建临时打包目录
-    local BUILD_DIR="${RELEASE_DIR}/${APP_NAME}-${ARCH_LABEL}"
+    local BUILD_DIR="${RELEASE_DIR}/${APP_NAME}-fnos-${ARCH_LABEL}"
     rm -rf "${BUILD_DIR}" 2>/dev/null || true
     mkdir -p "${BUILD_DIR}"
     
-    # 复制飞牛模板文件
     cp -r "${FNPACK_DIR}/"* "${BUILD_DIR}/"
-    
-    # 更新 manifest 的 platform
     sed -i '' "s/^platform.*/platform              = ${FNPLATFORM}/" "${BUILD_DIR}/manifest"
     
-    # 创建 app 目录结构
     mkdir -p "${BUILD_DIR}/app/server"
     mkdir -p "${BUILD_DIR}/app/www"
     
-    # 编译 Go 程序
-    cd backend
-    CGO_ENABLED=0 GOOS=linux GOARCH=${GOARCH} \
-        go build -ldflags="-s -w" -o "../${BUILD_DIR}/app/server/sqlite-manager" . 2>/dev/null
-    cd ..
+    cp "${RELEASE_DIR}/${APP_NAME}-linux-${ARCH_LABEL}/sqlite-manager" "${BUILD_DIR}/app/server/"
+    cp -r "${RELEASE_DIR}/${APP_NAME}-linux-${ARCH_LABEL}/www/"* "${BUILD_DIR}/app/www/"
     
-    # 复制前端静态资源
-    cp frontend/dist/index.html "${BUILD_DIR}/app/www/"
-    cp -r frontend/dist/sqlite-web "${BUILD_DIR}/app/www/"
-    
-    echo "✅ ${ARCH_LABEL} 编译完成"
-    
-    # 使用 fnpack build 打包
-    echo "📦 使用 fnpack build 打包 ${ARCH_LABEL} fpk..."
     cd "${BUILD_DIR}"
-    fnpack build
+    fnpack build > /dev/null 2>&1
     cd "${SCRIPT_DIR}"
     
-    # 移动 fpk 文件到 release 目录
-    local FPK_NAME="${APP_NAME}-v${VERSION}-${ARCH_LABEL}.fpk"
-    mv "${BUILD_DIR}/${APP_NAME}.fpk" "${RELEASE_DIR}/${FPK_NAME}" 2>/dev/null || true
-    
-    # 清理临时目录
+    mv "${BUILD_DIR}/${APP_NAME}.fpk" "${RELEASE_DIR}/${APP_NAME}-v${VERSION}-${ARCH_LABEL}.fpk"
     rm -rf "${BUILD_DIR}"
     
-    echo "✅ ${FPK_NAME} 打包完成"
+    echo "✅"
 }
 
-# 创建 release 目录
-mkdir -p "${RELEASE_DIR}"
+echo ""
+echo "🔨 编译所有平台..."
+echo ""
 
-# 编译并打包 arm 版本
-compile_and_pack "arm64" "arm" "arm"
+compile_platform "linux"   "amd64" "linux-amd64"
+compile_platform "linux"   "arm64" "linux-arm64"
+compile_platform "darwin"  "amd64" "macos-amd64"
+compile_platform "darwin"  "arm64" "macos-arm64"
+compile_platform "windows" "amd64" "windows-amd64"
 
-# 编译并打包 x86 版本
-compile_and_pack "amd64" "x86" "x86"
+echo ""
+echo "📦 打包飞牛应用..."
+build_fnpack "amd64" "x86" "amd64"
+build_fnpack "arm64" "arm" "arm64"
 
-# 恢复原始 manifest
 mv "${FNPACK_DIR}/manifest.bak" "${FNPACK_DIR}/manifest"
 
-# 显示结果
+echo ""
+echo "📦 创建压缩包..."
+cd "${RELEASE_DIR}"
+
+for dir in ${APP_NAME}-linux-* ${APP_NAME}-macos-* ${APP_NAME}-windows-*; do
+    if [ -d "$dir" ]; then
+        tar -czf "${dir}.tar.gz" "$dir/"
+    fi
+done
+
+tar -czf "${APP_NAME}-v${VERSION}-all.tar.gz" ${APP_NAME}-linux-* ${APP_NAME}-macos-* ${APP_NAME}-windows-*
+
+cd "${SCRIPT_DIR}"
+
 echo ""
 echo "============================================"
-echo "  ✅ 飞牛应用打包完成!"
+echo "  ✅ 打包完成!"
 echo "============================================"
 echo ""
-echo "📦 打包文件:"
+echo "📁 平台包:"
+ls -lh "${RELEASE_DIR}"/*.tar.gz 2>/dev/null | grep -v "all" | awk '{print "  " $NF " (" $5 ")"}'
+echo ""
+echo "📦 飞牛应用:"
 ls -lh "${RELEASE_DIR}"/*.fpk 2>/dev/null | awk '{print "  " $NF " (" $5 ")"}'
+echo ""
+echo "📦 全平台包:"
+ls -lh "${RELEASE_DIR}"/*all.tar.gz 2>/dev/null | awk '{print "  " $NF " (" $5 ")"}'
 echo ""
 echo "============================================"
