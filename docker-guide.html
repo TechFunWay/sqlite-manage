@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQLite Manager Docker 部署指南</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --border: #334155;
+            --text: #f1f5f9;
+            --text2: #94a3b8;
+            --code-bg: #0d1117;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 60px 0 40px; }
+        .logo { width: 70px; height: 70px; background: #2496ed; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 36px; }
+        h1 { font-size: 2rem; margin-bottom: 8px; }
+        .subtitle { color: var(--text2); }
+        h2 { font-size: 1.4rem; margin: 40px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+        h3 { font-size: 1.1rem; margin: 24px 0 12px; }
+        p { margin-bottom: 12px; color: var(--text2); }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .card h4 { margin-bottom: 12px; color: var(--text); }
+        pre { background: var(--code-bg); padding: 16px; border-radius: 8px; overflow-x: auto; margin: 12px 0; border: 1px solid var(--border); }
+        code { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: #a5d6ff; }
+        .comment { color: #6a737d; }
+        table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--card); color: var(--text); font-weight: 500; }
+        td { color: var(--text2); }
+        .tip { background: #0d4429; border: 1px solid #1a7f37; border-radius: 8px; padding: 12px 16px; margin: 12px 0; }
+        .tip::before { content: '💡 '; }
+        .warn { background: #4a3000; border: 1px solid #9e6a03; border-radius: 8px; padding: 12px 16px; margin: 12px 0; }
+        .warn::before { content: '⚠️ '; }
+        .steps { counter-reset: step; }
+        .step { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px; padding-left: 60px; position: relative; counter-increment: step; }
+        .step::before { content: counter(step); position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+        footer { text-align: center; padding: 40px 0; color: var(--text2); border-top: 1px solid var(--border); margin-top: 40px; }
+        @media (max-width: 768px) { h1 { font-size: 1.5rem; } .container { padding: 16px; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">🐳</div>
+            <h1>SQLite Manager</h1>
+            <p class="subtitle">Docker 部署指南</p>
+        </header>
+
+        <h2>📦 镜像信息</h2>
+        <div class="card">
+            <table>
+                <tr><th>属性</th><th>值</th></tr>
+                <tr><td>镜像名称</td><td><code>techfunways/sqlite-manage</code></td></tr>
+                <tr><td>最新版本</td><td><code>v1.0.0</code></td></tr>
+                <tr><td>支持架构</td><td>linux/amd64, linux/arm64</td></tr>
+                <tr><td>基础镜像</td><td>scratch（最小化）</td></tr>
+                <tr><td>默认端口</td><td>8080</td></tr>
+            </table>
+        </div>
+
+        <h2>🚀 快速开始</h2>
+        <div class="steps">
+            <div class="step">
+                <h4>拉取镜像</h4>
+                <pre><code>docker pull techfunways/sqlite-manage:v1.0.0</code></pre>
+            </div>
+            <div class="step">
+                <h4>运行容器</h4>
+                <pre><code>docker run -d \
+  --name sqlite-manager \
+  -p 8080:8080 \
+  -v ./data:/data \
+  techfunways/sqlite-manage:v1.0.0</code></pre>
+            </div>
+            <div class="step">
+                <h4>访问应用</h4>
+                <p>打开浏览器访问 <code>http://localhost:8080</code></p>
+            </div>
+        </div>
+
+        <h2>📁 目录结构</h2>
+        <div class="card">
+            <pre><code>容器内/
+├── app/
+│   ├── sqlite-manager      <span class="comment"># 可执行文件</span>
+│   └── www/                <span class="comment"># 静态资源（只读）</span>
+│       ├── index.html
+│       └── sqlite-web/
+└── data/                   <span class="comment"># 数据目录（需要挂载）</span>
+    ├── db/
+    │   └── database.db     <span class="comment"># 系统数据库</span>
+    ├── databases/          <span class="comment"># 用户创建的数据库</span>
+    └── upload/             <span class="comment"># 上传的文件</span></code></pre>
+        </div>
+
+        <div class="tip">建议将 <code>/data</code> 目录挂载到宿主机，确保数据持久化。</div>
+
+        <h2>⚙️ 环境变量</h2>
+        <div class="card">
+            <table>
+                <tr><th>变量</th><th>默认值</th><th>说明</th></tr>
+                <tr><td><code>SQLITE_DATA_DIR</code></td><td>/data</td><td>数据目录</td></tr>
+                <tr><td><code>SQLITE_UPLOAD_DIR</code></td><td>/data/upload</td><td>上传目录</td></tr>
+                <tr><td><code>SQLITE_WEB_DIR</code></td><td>/app/www</td><td>静态资源目录</td></tr>
+            </table>
+        </div>
+
+        <h2>🔧 常用命令</h2>
+        <div class="grid">
+            <div class="card">
+                <h4>基本运行</h4>
+                <pre><code>docker run -d \
+  -p 8080:8080 \
+  -v ./data:/data \
+  techfunways/sqlite-manage:v1.0.0</code></pre>
+            </div>
+            <div class="card">
+                <h4>指定端口</h4>
+                <pre><code>docker run -d \
+  -p 3000:3000 \
+  -v ./data:/data \
+  techfunways/sqlite-manage:v1.0.0 \
+  -port 3000</code></pre>
+            </div>
+            <div class="card">
+                <h4>查看日志</h4>
+                <pre><code>docker logs -f sqlite-manager</code></pre>
+            </div>
+            <div class="card">
+                <h4>进入容器</h4>
+                <pre><code>docker exec -it sqlite-manager sh</code></pre>
+            </div>
+            <div class="card">
+                <h4>重置密码</h4>
+                <pre><code>docker exec -it sqlite-manager \
+  /app/sqlite-manager reset-password</code></pre>
+            </div>
+            <div class="card">
+                <h4>停止/启动</h4>
+                <pre><code>docker stop sqlite-manager
+docker start sqlite-manager</code></pre>
+            </div>
+        </div>
+
+        <h2>📋 Docker Compose</h2>
+        <div class="card">
+            <h4>docker-compose.yml</h4>
+            <pre><code>version: '3.8'
+
+services:
+  sqlite-manager:
+    image: techfunways/sqlite-manage:v1.0.0
+    container_name: sqlite-manager
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    restart: unless-stopped</code></pre>
+            <p style="margin-top: 12px;">运行：<code>docker-compose up -d</code></p>
+        </div>
+
+        <h2>🔐 首次使用</h2>
+        <div class="steps">
+            <div class="step">
+                <h4>创建管理员账号</h4>
+                <p>首次访问会提示创建管理员账号，输入用户名和密码即可。</p>
+            </div>
+            <div class="step">
+                <h4>打开数据库</h4>
+                <p>点击"浏览服务器文件"选择数据库，或"新建数据库"创建新的数据库。</p>
+            </div>
+            <div class="step">
+                <h4>管理数据</h4>
+                <p>点击左侧表名查看数据，双击单元格编辑数据。</p>
+            </div>
+        </div>
+
+        <h2>⚠️ 注意事项</h2>
+        <div class="warn">确保宿主机的 <code>./data</code> 目录有读写权限，否则数据库无法正常工作。</div>
+        
+        <div class="card">
+            <h4>权限设置</h4>
+            <pre><code># 创建数据目录
+mkdir -p ./data
+
+# 设置权限（如果需要）
+chmod 777 ./data</code></pre>
+        </div>
+
+        <h2>🔄 数据备份</h2>
+        <div class="card">
+            <h4>备份数据目录</h4>
+            <pre><code># 备份
+tar -czf backup-$(date +%Y%m%d).tar.gz ./data
+
+# 恢复
+tar -xzf backup-20260401.tar.gz</code></pre>
+        </div>
+
+        <h2>🐛 故障排查</h2>
+        <div class="card">
+            <table>
+                <tr><th>问题</th><th>解决方案</th></tr>
+                <tr><td>页面 404</td><td>检查是否正确挂载了 <code>/data</code> 目录</td></tr>
+                <tr><td>无法创建数据库</td><td>确保 <code>./data</code> 目录有写权限</td></tr>
+                <tr><td>容器启动失败</td><td>查看日志：<code>docker logs sqlite-manager</code></td></tr>
+                <tr><td>忘记密码</td><td>运行：<code>docker exec -it sqlite-manager /app/sqlite-manager reset-password</code></td></tr>
+            </table>
+        </div>
+
+        <footer>
+            <p>SQLite Manager v1.0.0 - Docker 部署指南</p>
+            <p>© 2026 科技智趣坊</p>
+        </footer>
+    </div>
+</body>
+</html>
