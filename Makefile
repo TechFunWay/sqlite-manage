@@ -1,8 +1,7 @@
-.PHONY: all install backend frontend run dev build clean release fnpack help
+.PHONY: all install backend frontend run dev build clean release fnpack docker docker-merge help
 
 all: install build
 
-# 参数传递支持: make run ARGS="-port 3000 -data-dir ./mydata"
 ARGS ?=
 
 install:
@@ -40,36 +39,39 @@ dev: backend
 	cd frontend && npm run dev & FRONTEND_PID=$$!; \
 	wait
 
+# 一键打包所有
 release:
-	./release.sh
+	./build.sh
 
+# 打包各平台
+platforms:
+	./scripts/build-all.sh
+
+# 打包飞牛应用
 fnpack:
-	./fnpack-build.sh
+	./scripts/build-fnpack.sh
+
+# 构建 Docker 镜像
+docker:
+	./scripts/build-docker.sh
+
+# 合并 Docker 多平台镜像 (需要网络)
+docker-merge:
+	./scripts/docker-merge.sh
 
 help:
 	@echo "用法:"
-	@echo "  make build                          构建项目 (生产版本)"
-	@echo "  make run                            构建并运行 (生产模式)"
-	@echo "  make run ARGS=\"-port 3000\"            指定端口运行"
-	@echo "  make dev                            开发模式 (前端热更新)"
-	@echo "  make release                        构建发布包 (通用平台)"
-	@echo "  make fnpack                         打包飞牛 fnOS 应用"
-	@echo "  make clean                          清理构建文件"
+	@echo "  make build        构建项目 (本地运行)"
+	@echo "  make run          运行应用"
+	@echo "  make dev          开发模式"
 	@echo ""
-	@echo "模式说明:"
-	@echo "  run     - 生产模式: 前端构建后打包，单端口访问"
-	@echo "            访问: http://localhost:8080"
-	@echo "  dev     - 开发模式: 前端开发服务器+后端API"
-	@echo "            前端: http://localhost:5173 (修改自动刷新)"
-	@echo "            后端: http://localhost:8080 (API)"
-	@echo "  release - 构建通用平台发布包 (mac/linux/win)"
-	@echo "  fnpack  - 打包飞牛 fnOS 应用 (arm/x86)"
+	@echo "  make release      一键打包所有 (平台+飞牛+Docker)"
+	@echo "  make platforms    只打包各平台"
+	@echo "  make fnpack       只打包飞牛应用"
+	@echo "  make docker       只构建 Docker 镜像"
+	@echo "  make docker-merge 合并 Docker 多平台镜像 (需网络)"
 	@echo ""
-	@echo "参数选项:"
-	@echo "  -port string           服务端口 (默认: 8080)"
-	@echo "  -data-dir string       数据目录 (默认: ./data)"
-	@echo "  -web-dir string        静态资源目录 (默认: ./public)"
-	@echo "  -upload-dir string     上传目录 (默认: ./upload)"
+	@echo "  make clean        清理构建文件"
 
 clean:
 	rm -rf backend/sqlite-manager

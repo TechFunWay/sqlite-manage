@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQLite Manager - SQLite 数据库管理工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-hover: #334155;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-dark) 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 60px 0;
+            text-align: center;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: var(--primary);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 40px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 24px;
+        }
+        
+        .version-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        /* Navigation */
+        nav {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        nav ul {
+            display: flex;
+            justify-content: center;
+            list-style: none;
+            padding: 0;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        nav a {
+            display: block;
+            padding: 12px 20px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        
+        nav a:hover {
+            background: var(--bg-hover);
+            color: var(--text);
+        }
+        
+        /* Sections */
+        section {
+            padding: 60px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        section:last-child {
+            border-bottom: none;
+        }
+        
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        h2 .icon {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        
+        /* Features Grid */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .feature {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.2s;
+        }
+        
+        .feature:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+        
+        .feature h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+        
+        .feature p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        
+        /* Download Section */
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .download-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+        }
+        
+        .download-card h3 {
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .download-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--bg-hover);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .download-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .download-link {
+            color: var(--primary-light);
+            text-decoration: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .download-link:hover {
+            text-decoration: underline;
+        }
+        
+        /* Changelog */
+        .changelog {
+            position: relative;
+            padding-left: 30px;
+        }
+        
+        .changelog::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+        
+        .version-item {
+            position: relative;
+            margin-bottom: 32px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+        }
+        
+        .version-item::before {
+            content: '';
+            position: absolute;
+            left: -26px;
+            top: 28px;
+            width: 12px;
+            height: 12px;
+            background: var(--primary);
+            border-radius: 50%;
+            border: 3px solid var(--bg-dark);
+        }
+        
+        .version-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .version-tag {
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        
+        .version-date {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .changes {
+            list-style: none;
+        }
+        
+        .changes li {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .changes li:last-child {
+            border-bottom: none;
+        }
+        
+        .change-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+        .tag-new { background: #10b981; color: white; }
+        .tag-fix { background: #ef4444; color: white; }
+        .tag-opt { background: #3b82f6; color: white; }
+        .tag-docker { background: #8b5cf6; color: white; }
+        
+        /* Usage Steps */
+        .steps {
+            counter-reset: step;
+        }
+        
+        .step {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+            counter-increment: step;
+            position: relative;
+            padding-left: 70px;
+        }
+        
+        .step::before {
+            content: counter(step);
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        
+        .step h4 {
+            margin-bottom: 8px;
+        }
+        
+        .step p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        
+        .step code {
+            background: var(--bg-dark);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+        
+        /* Footer */
+        footer {
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            padding: 40px 0;
+            text-align: center;
+        }
+        
+        footer p {
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 16px;
+        }
+        
+        .links a {
+            color: var(--primary-light);
+            text-decoration: none;
+        }
+        
+        .links a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8rem; }
+            h2 { font-size: 1.4rem; }
+            section { padding: 40px 0; }
+            nav ul { padding: 8px; }
+            nav a { padding: 10px 14px; font-size: 0.9rem; }
+            .step { padding-left: 60px; }
+            .step::before { left: 12px; width: 32px; height: 32px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">💾</div>
+            <h1>SQLite Manager</h1>
+            <p class="subtitle">简洁高效的 SQLite 数据库 Web 管理工具</p>
+            <span class="version-badge">v1.0.0</span>
+        </div>
+    </header>
+    
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="#features">功能特性</a></li>
+                <li><a href="#download">下载安装</a></li>
+                <li><a href="#usage">使用说明</a></li>
+                <li><a href="#changelog">更新日志</a></li>
+            </ul>
+        </div>
+    </nav>
+    
+    <section id="features">
+        <div class="container">
+            <h2><span class="icon">⚡</span> 功能特性</h2>
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">📂</div>
+                    <h3>多数据库管理</h3>
+                    <p>同时打开和管理多个 SQLite 数据库，支持快速切换</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📋</div>
+                    <h3>表管理</h3>
+                    <p>查看所有表、表结构、索引信息，支持搜索和过滤</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">✏️</div>
+                    <h3>数据编辑</h3>
+                    <p>双击单元格编辑数据，支持新增、删除行，自动保存</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔧</div>
+                    <h3>结构修改</h3>
+                    <p>添加、删除字段，创建、删除索引，修改表结构</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📤</div>
+                    <h3>数据导出</h3>
+                    <p>支持将表数据导出为 CSV 格式，方便数据迁移</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔒</div>
+                    <h3>安全可靠</h3>
+                    <p>用户认证登录，密码加密存储，支持密码修改和重置</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section id="download">
+        <div class="container">
+            <h2><span class="icon">📥</span> 下载安装</h2>
+            <div class="download-grid">
+                <div class="download-card">
+                    <h3>🍎 macOS</h3>
+                    <div class="download-item">
+                        <span>Intel (x64)</span>
+                        <a href="release/v1.0.0/techfunway-sqlite-manage-1.0.0-macos-amd64.tar.gz" class="download-link">
+                            ⬇️ 下载
+                        </a>
+                    </div>
+                    <div class="download-item">
+                        <span>Apple Silicon (M1/M2)</span>
+                        <a href="release/v1.0.0/techfunway-sqlite-manage-1.0.0-macos-arm64.tar.gz" class="download-link">
+                            ⬇️ 下载
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="download-card">
+                    <h3>🐧 Linux</h3>
+                    <div class="download-item">
+                        <span>x64</span>
+                        <a href="release/v1.0.0/techfunway-sqlite-manage-1.0.0-linux-amd64.tar.gz" class="download-link">
+                            ⬇️ 下载
+                        </a>
+                    </div>
+                    <div class="download-item">
+                        <span>ARM64</span>
+                        <a href="release/v1.0.0/techfunway-sqlite-manage-1.0.0-linux-arm64.tar.gz" class="download-link">
+                            ⬇️ 下载
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="download-card">
+                    <h3>🪟 Windows</h3>
+                    <div class="download-item">
+                        <span>x64</span>
+                        <a href="release/v1.0.0/techfunway-sqlite-manage-1.0.0-windows-amd64.tar.gz" class="download-link">
+                            ⬇️ 下载
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="download-card">
+                    <h3>📱 飞牛 NAS</h3>
+                    <div class="download-item">
+                        <span>x86 版本</span>
+                        <a href="release/v1.0.0/techfunway-sqlite-manage-v1.0.0-fnos-amd64.fpk" class="download-link">
+                            ⬇️ 下载
+                        </a>
+                    </div>
+                    <div class="download-item">
+                        <span>ARM 版本</span>
+                        <a href="release/v1.0.0/techfunway-sqlite-manage-v1.0.0-fnos-arm64.fpk" class="download-link">
+                            ⬇️ 下载
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="download-card">
+                    <h3>🐳 Docker</h3>
+                    <div class="download-item">
+                        <span>AMD64 镜像</span>
+                        <a href="release/v1.0.0/techfunways-sqlite-manage-v1.0.0-amd64.docker.tar.gz" class="download-link">
+                            ⬇️ 下载
+                        </a>
+                    </div>
+                    <div class="download-item">
+                        <span>ARM64 镜像</span>
+                        <a href="release/v1.0.0/techfunways-sqlite-manage-v1.0.0-arm64.docker.tar.gz" class="download-link">
+                            ⬇️ 下载
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section id="usage">
+        <div class="container">
+            <h2><span class="icon">📖</span> 使用说明</h2>
+            <div class="steps">
+                <div class="step">
+                    <h4>启动程序</h4>
+                    <p>解压后运行 <code>./start.sh</code> (Linux/macOS) 或双击 <code>start.bat</code> (Windows)</p>
+                </div>
+                <div class="step">
+                    <h4>创建管理员账号</h4>
+                    <p>首次访问会提示创建管理员账号，输入用户名和密码即可</p>
+                </div>
+                <div class="step">
+                    <h4>打开数据库</h4>
+                    <p>点击"浏览服务器文件"选择数据库，或"新建数据库"创建新的数据库</p>
+                </div>
+                <div class="step">
+                    <h4>管理数据</h4>
+                    <p>点击左侧表名查看数据，双击单元格编辑，点击"新建表"创建新表</p>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 32px; margin-bottom: 16px;">常用命令</h3>
+            <div class="download-card">
+                <div class="download-item">
+                    <span>查看版本</span>
+                    <code>./sqlite-manager version</code>
+                </div>
+                <div class="download-item">
+                    <span>重置密码</span>
+                    <code>./sqlite-manager reset-password</code>
+                </div>
+                <div class="download-item">
+                    <span>指定端口</span>
+                    <code>./sqlite-manager -port 3000</code>
+                </div>
+                <div class="download-item">
+                    <span>查看帮助</span>
+                    <code>./sqlite-manager help</code>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 32px; margin-bottom: 16px;">Docker 运行</h3>
+            <div class="download-card">
+                <div class="download-item">
+                    <span>运行容器</span>
+                    <code style="font-size: 0.8rem;">docker run -p 8080:8080 -v ./data:/data techfunways/sqlite-manage:v1.0.0-amd64</code>
+                </div>
+                <div class="download-item">
+                    <span>加载镜像</span>
+                    <code>docker load &lt; xxx.docker.tar.gz</code>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section id="changelog">
+        <div class="container">
+            <h2><span class="icon">📝</span> 更新日志</h2>
+            <div class="changelog">
+                <div class="version-item">
+                    <div class="version-header">
+                        <span class="version-tag">v1.0.0</span>
+                        <span class="version-date">2026-03-31</span>
+                    </div>
+                    <ul class="changes">
+                        <li><span class="change-tag tag-new">新功能</span> 数据库管理：支持多数据库同时打开和管理</li>
+                        <li><span class="change-tag tag-new">新功能</span> 文件浏览器：浏览服务器文件系统选择数据库</li>
+                        <li><span class="change-tag tag-new">新功能</span> 用户认证：支持登录、注册、密码修改</li>
+                        <li><span class="change-tag tag-new">新功能</span> 数据编辑：双击单元格编辑，支持新增/删除行</li>
+                        <li><span class="change-tag tag-new">新功能</span> 表结构：查看和修改表结构、字段、索引</li>
+                        <li><span class="change-tag tag-new">新功能</span> 数据导出：支持导出为 CSV 格式</li>
+                        <li><span class="change-tag tag-new">新功能</span> 飞牛 NAS：支持 fnOS 应用打包和安装</li>
+                        <li><span class="change-tag tag-new">新功能</span> Docker：支持多平台镜像构建</li>
+                        <li><span class="change-tag tag-opt">优化</span> 响应式设计：完美适配桌面和移动设备</li>
+                        <li><span class="change-tag tag-opt">优化</span> 深色主题：专业级 UI 设计</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <footer>
+        <div class="container">
+            <p>SQLite Manager - 简洁高效的 SQLite 数据库管理工具</p>
+            <p>© 2026 科技智趣坊. All rights reserved.</p>
+            <div class="links">
+                <a href="http://techfunway.wycto.cn">官网</a>
+                <a href="http://techfunway.wycto.cn/fnapp/sqlite-manage">飞牛应用</a>
+            </div>
+        </div>
+    </footer>
+    
+    <script>
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

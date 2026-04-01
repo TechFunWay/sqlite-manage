@@ -1,0 +1,50 @@
+#!/bin/bash
+
+set -e
+
+PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+cd "$PROJECT_DIR"
+
+VERSION=$(grep -o 'const Version = "[^"]*"' backend/upgrade/upgrade.go | cut -d'"' -f2)
+[ -z "$VERSION" ] && echo "❌ 无法获取版本号" && exit 1
+
+APP_NAME="techfunway-sqlite-manage"
+RELEASE_DIR="release/v${VERSION}"
+
+[ ! -d "${RELEASE_DIR}/${APP_NAME}-${VERSION}-linux-amd64" ] && echo "❌ 请先运行 ./scripts/build-all.sh" && exit 1
+
+echo "============================================"
+echo "  飞牛 fnOS 打包 v${VERSION}"
+echo "============================================"
+
+cp fnpack/manifest fnpack/manifest.bak
+sed -i '' "s/^version.*/version               = ${VERSION}/" fnpack/manifest
+
+build_fnpack() {
+    local ARCH=$1 PLATFORM=$2 LABEL=$3
+    echo -n "  📦 ${LABEL}.fpk... "
+    
+    local DIR="${RELEASE_DIR}/.fnpack-${ARCH}"
+    rm -rf "${DIR}" && mkdir -p "${DIR}"
+    cp -r fnpack/* "${DIR}/"
+    sed -i '' "s/^platform.*/platform              = ${PLATFORM}/" "${DIR}/manifest"
+    mkdir -p "${DIR}/app/server" "${DIR}/app/www"
+    
+    cp "${RELEASE_DIR}/${APP_NAME}-${VERSION}-linux-${ARCH}/sqlite-manager" "${DIR}/app/server/"
+    cp -r "${RELEASE_DIR}/${APP_NAME}-${VERSION}-linux-${ARCH}/www/"* "${DIR}/app/www/"
+    
+    cd "${DIR}" && fnpack build > /dev/null 2>&1 && cd "$PROJECT_DIR"
+    mv "${DIR}/${APP_NAME}.fpk" "${RELEASE_DIR}/${APP_NAME}-v${VERSION}-${LABEL}.fpk"
+    rm -rf "${DIR}"
+    echo "✅"
+}
+
+echo ""
+build_fnpack "amd64" "x86" "fnos-amd64"
+build_fnpack "arm64" "arm" "fnos-arm64"
+
+mv fnpack/manifest.bak fnpack/manifest
+
+echo ""
+echo "✅ 完成!"
+ls -lh "${RELEASE_DIR}"/*.fpk | awk '{print "  " $NF " (" $5 ")"}'
