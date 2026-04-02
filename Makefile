@@ -1,4 +1,4 @@
-.PHONY: all install backend frontend run dev build clean release fnpack docker docker-merge help
+.PHONY: all install backend frontend run dev build clean release fnpack docker help
 
 all: install build
 
@@ -39,25 +39,17 @@ dev: backend
 	cd frontend && npm run dev & FRONTEND_PID=$$!; \
 	wait
 
-# 一键打包所有
 release:
 	./build.sh
 
-# 打包各平台
 platforms:
 	./scripts/build-all.sh
 
-# 打包飞牛应用
 fnpack:
 	./scripts/build-fnpack.sh
 
-# 构建 Docker 镜像
 docker:
 	./scripts/build-docker.sh
-
-# 合并 Docker 多平台镜像 (需要网络)
-docker-merge:
-	./scripts/docker-merge.sh
 
 help:
 	@echo "用法:"
@@ -68,8 +60,7 @@ help:
 	@echo "  make release      一键打包所有 (平台+飞牛+Docker)"
 	@echo "  make platforms    只打包各平台"
 	@echo "  make fnpack       只打包飞牛应用"
-	@echo "  make docker       只构建 Docker 镜像"
-	@echo "  make docker-merge 合并 Docker 多平台镜像 (需网络)"
+	@echo "  make docker       构建 Docker 多平台镜像"
 	@echo ""
 	@echo "  make clean        清理构建文件"
 
