@@ -52,6 +52,8 @@ chmod +x sqlite-manager 2>/dev/null || true
     cp frontend/dist/index.html "${DIR}/www/"
     cp -r frontend/dist/sqlite-web "${DIR}/www/"
     
+    find "${DIR}" -name ".DS_Store" -delete 2>/dev/null || true
+    
     echo "✅"
 }
 
@@ -69,7 +71,7 @@ echo "📦 创建压缩包..."
 cd "${RELEASE_DIR}"
 for dir in ${APP_NAME}-${VERSION}-*/; do
     name=$(basename "$dir")
-    tar -czf "${name}.tar.gz" "$dir"
+    tar -czf "${name}.tar.gz" --exclude='.DS_Store' "$dir"
 done
 cd "$PROJECT_DIR"
 
