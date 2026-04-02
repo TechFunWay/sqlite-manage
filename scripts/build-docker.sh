@@ -21,6 +21,9 @@ echo "============================================"
 # 清理旧镜像
 docker rmi $(docker images "${IMAGE_NAME}" -q) 2>/dev/null || true
 
+# 删除 .DS_Store
+find "${RELEASE_DIR}" -name ".DS_Store" -delete 2>/dev/null || true
+
 # 切换到 default context
 docker context use default 2>/dev/null || true
 

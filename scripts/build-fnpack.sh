@@ -21,19 +21,31 @@ cp fnpack/manifest fnpack/manifest.bak
 sed -i '' "s/^version.*/version               = ${VERSION}/" fnpack/manifest
 
 build_fnpack() {
-    local ARCH=$1 PLATFORM=$2 LABEL=$3
+    ARCH=$1
+    PLATFORM=$2
+    LABEL=$3
     echo -n "  📦 ${LABEL}.fpk... "
     
-    local DIR="${RELEASE_DIR}/.fnpack-${ARCH}"
-    rm -rf "${DIR}" && mkdir -p "${DIR}"
+    DIR="${RELEASE_DIR}/.fnpack-${ARCH}"
+    rm -rf "${DIR}"
+    mkdir -p "${DIR}"
+    
+    # 复制飞牛模板，排除 .DS_Store
+    find fnpack -name ".DS_Store" -delete 2>/dev/null || true
     cp -r fnpack/* "${DIR}/"
     sed -i '' "s/^platform.*/platform              = ${PLATFORM}/" "${DIR}/manifest"
-    mkdir -p "${DIR}/app/server" "${DIR}/app/www"
     
+    mkdir -p "${DIR}/app/server" "${DIR}/app/www"
     cp "${RELEASE_DIR}/${APP_NAME}-${VERSION}-linux-${ARCH}/sqlite-manager" "${DIR}/app/server/"
     cp -r "${RELEASE_DIR}/${APP_NAME}-${VERSION}-linux-${ARCH}/www/"* "${DIR}/app/www/"
     
-    cd "${DIR}" && fnpack build > /dev/null 2>&1 && cd "$PROJECT_DIR"
+    # 删除 .DS_Store
+    find "${DIR}" -name ".DS_Store" -delete 2>/dev/null || true
+    
+    cd "${DIR}"
+    fnpack build > /dev/null 2>&1
+    cd "$PROJECT_DIR"
+    
     mv "${DIR}/${APP_NAME}.fpk" "${RELEASE_DIR}/${APP_NAME}-v${VERSION}-${LABEL}.fpk"
     rm -rf "${DIR}"
     echo "✅"
