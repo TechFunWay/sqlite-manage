@@ -61,6 +61,27 @@ const showContent = computed(() => store.currentTable !== null)
 
 onMounted(async () => {
   await store.loadDatabases()
+  
+  // 处理从文件管理器右键打开的数据库文件
+  const urlParams = new URLSearchParams(window.location.search)
+  const dbPath = urlParams.get('path')
+  if (dbPath) {
+    // 检查是否已经打开过，避免重复
+    const existingDb = store.databases.find(db => db.path === dbPath)
+    if (existingDb) {
+      await store.activateDatabase(existingDb.id)
+    } else {
+      const success = await store.openDatabase(dbPath)
+      if (success) {
+        // 保存到最近打开
+        const recent = JSON.parse(localStorage.getItem('recentDatabases') || '[]')
+        const updated = [dbPath, ...recent.filter(p => p !== dbPath)].slice(0, 5)
+        localStorage.setItem('recentDatabases', JSON.stringify(updated))
+      }
+    }
+    return
+  }
+  
   // If has databases, set active tab to data
   if (store.databases.length > 0) {
     activeTab.value = 'data'

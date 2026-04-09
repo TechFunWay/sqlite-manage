@@ -33,6 +33,23 @@ const recentDatabases = ref(JSON.parse(localStorage.getItem('recentDatabases') |
 
 onMounted(async () => {
   await store.loadDatabases()
+  
+  // 处理从文件管理器右键打开的数据库文件
+  const urlParams = new URLSearchParams(window.location.search)
+  const dbPath = urlParams.get('path')
+  if (dbPath) {
+    // 检查是否已经打开过，避免重复
+    const existingDb = store.databases.find(db => db.path === dbPath)
+    if (existingDb) {
+      await store.activateDatabase(existingDb.id)
+    } else {
+      const success = await store.openDatabase(dbPath)
+      if (success) {
+        addToRecent(dbPath)
+      }
+    }
+    router.push('/database')
+  }
 })
 
 function addToRecent(path) {

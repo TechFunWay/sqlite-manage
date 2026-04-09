@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import DatabaseView from '../views/DatabaseView.vue'
+import HomeView from '../views/HomeView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -12,7 +13,8 @@ const router = createRouter({
     },
     {
       path: '/',
-      redirect: '/database'
+      name: 'home',
+      component: HomeView
     },
     {
       path: '/database',
