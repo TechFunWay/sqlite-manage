@@ -93,17 +93,25 @@ func Open(dbPath string) (*Database, error) {
 		return nil, fmt.Errorf("invalid path: %w", err)
 	}
 
+	// 检查是否已存在相同路径的数据库
+	for _, db := range databases {
+		if db.Path == absPath {
+			activeDB = db
+			return db, nil
+		}
+	}
+
 	if _, err := os.Stat(absPath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("database file does not exist: %s", absPath)
 	}
 
-	db, err := sql.Open("sqlite", absPath+"?_journal_mode=WAL&_foreign_keys=ON")
+	sqlDB, err := sql.Open("sqlite", absPath+"?_journal_mode=WAL&_foreign_keys=ON")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	if err := db.Ping(); err != nil {
-		db.Close()
+	if err := sqlDB.Ping(); err != nil {
+		sqlDB.Close()
 		return nil, fmt.Errorf("failed to connect: %w", err)
 	}
 
@@ -118,10 +126,10 @@ func Open(dbPath string) (*Database, error) {
 	if stat != nil {
 		database.Size = stat.Size()
 	}
-	database.db = db
+	database.db = sqlDB
 
 	databases[id] = database
-	connections[id] = db
+	connections[id] = sqlDB
 	activeDB = database
 
 	return database, nil
@@ -136,6 +144,14 @@ func OpenOrCreate(dbPath string) (*Database, error) {
 		return nil, fmt.Errorf("invalid path: %w", err)
 	}
 
+	// 检查是否已存在相同路径的数据库
+	for _, db := range databases {
+		if db.Path == absPath {
+			activeDB = db
+			return db, nil
+		}
+	}
+
 	if _, err := os.Stat(absPath); os.IsNotExist(err) {
 		file, err := os.Create(absPath)
 		if err != nil {
@@ -144,13 +160,13 @@ func OpenOrCreate(dbPath string) (*Database, error) {
 		file.Close()
 	}
 
-	db, err := sql.Open("sqlite", absPath+"?_journal_mode=WAL&_foreign_keys=ON")
+	sqlDB, err := sql.Open("sqlite", absPath+"?_journal_mode=WAL&_foreign_keys=ON")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	if err := db.Ping(); err != nil {
-		db.Close()
+	if err := sqlDB.Ping(); err != nil {
+		sqlDB.Close()
 		return nil, fmt.Errorf("failed to connect: %w", err)
 	}
 
@@ -165,10 +181,10 @@ func OpenOrCreate(dbPath string) (*Database, error) {
 	if stat != nil {
 		database.Size = stat.Size()
 	}
-	database.db = db
+	database.db = sqlDB
 
 	databases[id] = database
-	connections[id] = db
+	connections[id] = sqlDB
 	activeDB = database
 
 	return database, nil
