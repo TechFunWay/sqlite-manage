@@ -20,10 +20,11 @@ type Database struct {
 }
 
 var (
-	mu          sync.RWMutex
-	databases   = make(map[string]*Database)
-	activeDB    *Database
-	connections = make(map[string]*sql.DB)
+	mu               sync.RWMutex
+	databases        = make(map[string]*Database)
+	activeDB         *Database
+	connections      = make(map[string]*sql.DB)
+	currentTableName string // 当前选中的表名
 )
 
 type Table struct {
@@ -239,6 +240,18 @@ func IsOpen() bool {
 	return activeDB != nil
 }
 
+func SetCurrentTableName(tableName string) {
+	mu.Lock()
+	defer mu.Unlock()
+	currentTableName = tableName
+}
+
+func GetCurrentTableName() string {
+	mu.RLock()
+	defer mu.RUnlock()
+	return currentTableName
+}
+
 func GetAllDatabases() []Info {
 	mu.RLock()
 	defer mu.RUnlock()
@@ -421,26 +434,53 @@ func GetSchema(tableName string) (*Schema, error) {
 	return schema, nil
 }
 
-func GetData(tableName string, page, pageSize int) ([]map[string]interface{}, int64, error) {
+func GetData(tableName string, page, pageSize int, whereClause string) ([]map[string]interface{}, int64, error) {
 	db := getDB()
 	if db == nil {
 		return nil, 0, fmt.Errorf("no database connected")
 	}
 
+	// 获取总数
 	var total int64
-	err := db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM \"%s\"", tableName)).Scan(&total)
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM \"%s\"", tableName)
+	
+	if whereClause != "" {
+		countQuery = fmt.Sprintf("SELECT COUNT(*) FROM \"%s\" WHERE %s", tableName, whereClause)
+	}
+	
+	err := db.QueryRow(countQuery).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
 
+	// 分页查询
 	offset := (page - 1) * pageSize
-	query := fmt.Sprintf("SELECT * FROM \"%s\" LIMIT ? OFFSET ?", tableName)
-	rows, err := db.Query(query, pageSize, offset)
-	if err != nil {
-		return nil, 0, err
+	query := fmt.Sprintf("SELECT * FROM \"%s\"", tableName)
+	
+	if whereClause != "" {
+		query = fmt.Sprintf("SELECT * FROM \"%s\" WHERE %s LIMIT ? OFFSET ?", tableName, whereClause)
+		rows, err := db.Query(query, pageSize, offset)
+		if err != nil {
+			return nil, total, err
+		}
+		defer rows.Close()
+		
+		results, _, err := scanRows(rows)
+		return results, total, err
+	} else {
+		query = fmt.Sprintf("SELECT * FROM \"%s\" LIMIT ? OFFSET ?", tableName)
+		rows, err := db.Query(query, pageSize, offset)
+		if err != nil {
+			return nil, total, err
+		}
+		defer rows.Close()
+		
+		results, _, err := scanRows(rows)
+		return results, total, err
 	}
-	defer rows.Close()
+}
 
+func scanRows(rows *sql.Rows) ([]map[string]interface{}, int64, error) {
 	columns, err := rows.Columns()
 	if err != nil {
 		return nil, 0, err
@@ -470,7 +510,7 @@ func GetData(tableName string, page, pageSize int) ([]map[string]interface{}, in
 		results = append(results, row)
 	}
 
-	return results, total, nil
+	return results, 0, nil
 }
 
 func InsertRow(tableName string, data map[string]interface{}) (int64, error) {

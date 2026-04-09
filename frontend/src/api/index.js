@@ -89,8 +89,8 @@ export const tableApi = {
 }
 
 export const dataApi = {
-  getData: (name, page = 1, pageSize = 100) => 
-    api.get(`/tables/${name}/data`, { params: { page, pageSize } }),
+  getData: (name, page = 1, pageSize = 100, where = '') => 
+    api.get(`/tables/${name}/data`, { params: { page, pageSize, where } }),
   insert: (name, data) => api.post(`/tables/${name}/data`, { data }),
   update: (name, primaryKey, pkValue, data) => 
     api.put(`/tables/${name}/data`, { primaryKey, pkValue, data }),
