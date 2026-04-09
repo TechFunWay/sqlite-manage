@@ -5,9 +5,12 @@ desc                  = SQLite Web 数据库管理工具 - 支持数据库浏览
 platform              = x86
 source                = thirdparty
 maintainer            = 科技智趣坊
-maintainer_url        = http://techfunway.wycto.cn/fnapp/sqlite-manage
+maintainer_url        = http://techfunway.wycto.cn/fnapp/sqlite-manage/
 distributor           = 科技智趣坊
 distributor_url       = http://techfunway.wycto.cn
 desktop_uidir         = ui
 desktop_applaunchname = techfunway-sqlite-manage.Application
-changelog             = Sqlite管理工具
+changelog             = """
+1. 新增：飞牛右键打开【.db、.db3、.sqlite、.sqlite3】数据库
+2. 优化：输入框焦点定位、支持按回车确定
+"""

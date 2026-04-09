@@ -12,6 +12,7 @@ func GetTableData(c *gin.Context) {
 	tableName := c.Param("name")
 	pageStr := c.DefaultQuery("page", "1")
 	pageSizeStr := c.DefaultQuery("pageSize", "100")
+	where := c.DefaultQuery("where", "")
 
 	page, err := strconv.Atoi(pageStr)
 	if err != nil || page < 1 {
@@ -28,7 +29,10 @@ func GetTableData(c *gin.Context) {
 		return
 	}
 
-	data, total, err := database.GetData(tableName, page, pageSize)
+	// 设置当前表名，供 SQL 执行器使用
+	database.SetCurrentTableName(tableName)
+
+	data, total, err := database.GetData(tableName, page, pageSize, where)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -39,6 +43,7 @@ func GetTableData(c *gin.Context) {
 		"total":    total,
 		"page":     page,
 		"pageSize": pageSize,
+		"where":    where,
 	})
 }
 
@@ -139,15 +144,79 @@ func ExecuteQuery(c *gin.Context) {
 		return
 	}
 
-	upperSQL := req.SQL
-	for i := 0; i < len(upperSQL); i++ {
-		if upperSQL[i] >= 'a' && upperSQL[i] <= 'z' {
-			upperSQL = upperSQL[:i] + string(upperSQL[i]-32) + upperSQL[i+1:]
+	sql := req.SQL
+	if sql == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "SQL 语句不能为空"})
+		return
+	}
+
+	// 获取当前表名
+	currentTable := database.GetCurrentTableName()
+
+	// 如果 SQL 中没有指定表名，自动添加当前表
+	upperSQL := ""
+	for i := 0; i < len(sql); i++ {
+		if sql[i] >= 'a' && sql[i] <= 'z' {
+			upperSQL += string(sql[i] - 32)
+		} else {
+			upperSQL += string(sql[i])
 		}
 	}
 
-	if len(upperSQL) > 0 && (upperSQL[:6] == "SELECT" || upperSQL[:6] == "PRAGMA" || upperSQL[:4] == "WITH") {
-		results, err := database.ExecuteQuery(req.SQL)
+	// 检测 SQL 类型
+	isSelect := false
+	if len(upperSQL) >= 6 && upperSQL[:6] == "SELECT" {
+		isSelect = true
+	} else if len(upperSQL) >= 6 && upperSQL[:6] == "PRAGMA" {
+		isSelect = true
+	} else if len(upperSQL) >= 4 && upperSQL[:4] == "WITH" {
+		isSelect = true
+	}
+
+	// 如果是 SELECT 但没有 FROM 子句，自动添加
+	if isSelect && currentTable != "" {
+		// 检查是否已有 FROM 子句（简单检测）
+		hasFrom := false
+		for i := 0; i < len(upperSQL)-4; i++ {
+			if upperSQL[i:i+4] == "FROM" {
+				hasFrom = true
+				break
+			}
+		}
+		
+		if !hasFrom {
+			// 在 WHERE 前插入 FROM 表名，如果没有 WHERE 则在语句末尾插入
+			whereIdx := -1
+			for i := 0; i < len(upperSQL)-5; i++ {
+				if upperSQL[i:i+5] == "WHERE" {
+					whereIdx = i
+					break
+				}
+			}
+			
+			if whereIdx > 0 {
+				sql = sql[:whereIdx] + "FROM \"" + currentTable + "\" " + sql[whereIdx:]
+			} else {
+				// 在 SELECT 后面找第一个空格，然后插入 FROM
+				spaceIdx := 6
+				for spaceIdx < len(sql) && sql[spaceIdx] == ' ' {
+					spaceIdx++
+				}
+				// 找到下一个空格或关键字
+				for spaceIdx < len(sql) {
+					ch := uint8(sql[spaceIdx])
+					if ch == ' ' || ch == 'W' || ch == 'O' || ch == 'G' || ch == 'L' || ch == 'O' || ch == 'R' || ch == 'D' || ch == 'B' || ch == 'E' || ch == 'N' || ch == 'T' || ch == 'C' || ch == 'A' || ch == 'S' {
+						break
+					}
+					spaceIdx++
+				}
+				sql = sql[:spaceIdx] + " FROM \"" + currentTable + "\" " + sql[spaceIdx:]
+			}
+		}
+	}
+
+	if isSelect {
+		results, err := database.ExecuteQuery(sql)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -158,7 +227,7 @@ func ExecuteQuery(c *gin.Context) {
 			"data": results,
 		})
 	} else {
-		rowsAffected, err := database.ExecuteNonQuery(req.SQL)
+		rowsAffected, err := database.ExecuteNonQuery(sql)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
