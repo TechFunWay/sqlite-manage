@@ -8,6 +8,17 @@
             "port": "${wizard_app_port}",
             "url": "/",
             "allUsers": false
+        },
+        "techfunway-sqlite-manage.OpenDb": {
+            "title": "使用Sqlite管理工具打开",
+            "icon": "images/icon_{0}.png",
+            "type": "url",
+            "protocol": "http",
+            "port": "${wizard_app_port}",
+            "url": "/",
+            "allUsers": true,
+            "fileTypes": ["db", "db3", "sqlite", "sqlite3"],
+            "noDisplay": true
         }
     }
 }

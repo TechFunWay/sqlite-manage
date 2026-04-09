@@ -219,7 +219,7 @@ defineExpose({ addToRecent, loadRecentDatabases })
                 活跃
               </span>
               <button
-                v-else
+                v-if="!loadingDb || loadingDb !== db.id"
                 @click.stop="closeDatabase(db, $event)"
                 class="p-1 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"
                 title="关闭"
