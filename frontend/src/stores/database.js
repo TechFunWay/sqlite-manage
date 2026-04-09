@@ -19,8 +19,12 @@ export const useDatabaseStore = defineStore('database', () => {
   const totalRows = ref(0)
   const primaryKey = ref(null)
   const activeTab = ref('select') // 'select', 'data', 'schema', 'info'
+  const queryWhere = ref('') // 查询条件 SQL
+  const queryConditions = ref([]) // 查询条件结构化数据
+  const queryLogic = ref('AND') // 查询条件逻辑 AND/OR
 
   const hasDatabase = computed(() => databases.value.length > 0)
+  const hasQueryCondition = computed(() => queryConditions.value.length > 0)
 
   function showDatabaseSelector() {
     activeTab.value = 'select'
@@ -163,6 +167,10 @@ export const useDatabaseStore = defineStore('database', () => {
     loading.value = true
     currentTable.value = tableName
     currentPage.value = 1
+    // 切换表时清空查询条件
+    queryWhere.value = ''
+    queryConditions.value = []
+    queryLogic.value = 'AND'
     activeTab.value = 'data' // Auto switch to data tab
     try {
       const [schemaRes, dataRes, pkRes] = await Promise.all([
@@ -185,7 +193,7 @@ export const useDatabaseStore = defineStore('database', () => {
     if (!currentTable.value) return
     loading.value = true
     try {
-      const response = await dataApi.getData(currentTable.value, page, pageSize.value)
+      const response = await dataApi.getData(currentTable.value, page, pageSize.value, queryWhere.value)
       currentData.value = response.data.data
       currentPage.value = page
       totalRows.value = response.data.total
@@ -193,6 +201,31 @@ export const useDatabaseStore = defineStore('database', () => {
       toast.error('Failed to load page')
     } finally {
       loading.value = false
+    }
+  }
+
+  async function executeQuery() {
+    if (!currentTable.value) return
+    loading.value = true
+    currentPage.value = 1
+    try {
+      const response = await dataApi.getData(currentTable.value, 1, pageSize.value, queryWhere.value)
+      currentData.value = response.data.data
+      totalRows.value = response.data.total
+      toast.success(`查询完成，共 ${response.data.total} 条记录`)
+    } catch (error) {
+      toast.error(error.response?.data?.error || '查询失败')
+    } finally {
+      loading.value = false
+    }
+  }
+
+  function clearQuery() {
+    queryWhere.value = ''
+    queryConditions.value = []
+    queryLogic.value = 'AND'
+    if (currentTable.value) {
+      loadPage(1)
     }
   }
 
@@ -323,6 +356,10 @@ export const useDatabaseStore = defineStore('database', () => {
     totalRows,
     primaryKey,
     activeTab,
+    queryWhere,
+    queryConditions,
+    queryLogic,
+    hasQueryCondition,
     hasDatabase,
     showDatabaseSelector,
     openDatabase,
@@ -334,6 +371,8 @@ export const useDatabaseStore = defineStore('database', () => {
     loadTables,
     selectTable,
     loadPage,
+    executeQuery,
+    clearQuery,
     insertRow,
     updateRow,
     deleteRow,

@@ -1,7 +1,9 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
 import { useDatabaseStore } from '../../stores/database'
-import { Plus, Trash2, Edit3, Check, X, ChevronLeft, ChevronRight, Download, Upload } from 'lucide-vue-next'
+import { useToastStore } from '../../stores/toast'
+import { queryApi } from '../../api'
+import { Plus, Trash2, Edit3, Check, X, ChevronLeft, ChevronRight, Download, Upload, Search, XCircle, Terminal, Loader } from 'lucide-vue-next'
 import Button from '../common/Button.vue'
 import Modal from '../common/Modal.vue'
 import Input from '../common/Input.vue'
@@ -9,6 +11,7 @@ import Select from '../common/Select.vue'
 import ConfirmDialog from '../common/ConfirmDialog.vue'
 
 const store = useDatabaseStore()
+const toast = useToastStore()
 
 const editingCell = ref(null)
 const editValue = ref('')
@@ -19,7 +22,159 @@ const showDeleteConfirm = ref(false)
 const rowToDelete = ref(null)
 const pageInput = ref('1')
 
+// SQL 执行
+const showSqlPanel = ref(false)
+const sqlInput = ref('')
+const sqlResult = ref(null)
+const sqlLoading = ref(false)
+
+// 查询条件 - 支持多个条件（使用store中的状态）
+const showQueryPanel = ref(false)
+
+const operators = [
+  { value: '=', label: '等于 (=)' },
+  { value: '!=', label: '不等于 (!=)' },
+  { value: '>', label: '大于 (>)' },
+  { value: '>=', label: '大于等于 (>=)' },
+  { value: '<', label: '小于 (<)' },
+  { value: '<=', label: '小于等于 (<=)' },
+  { value: 'LIKE', label: '包含 (LIKE)' },
+  { value: 'NOT LIKE', label: '不包含 (NOT LIKE)' },
+  { value: 'IS NULL', label: '为空 (IS NULL)' },
+  { value: 'IS NOT NULL', label: '不为空 (IS NOT NULL)' }
+]
+
+const logicOptions = [
+  { value: 'AND', label: '且 (AND)' },
+  { value: 'OR', label: '或 (OR)' }
+]
+
 const totalPages = computed(() => Math.ceil(store.totalRows / store.pageSize) || 1)
+
+const columnOptions = computed(() => {
+  if (!store.currentSchema) return []
+  return store.currentSchema.columns.map(col => ({
+    value: col.name,
+    label: col.name + ' (' + col.type + ')'
+  }))
+})
+
+// 判断字段是否为数值类型
+function isNumericType(colName) {
+  const col = store.currentSchema?.columns.find(c => c.name === colName)
+  if (!col) return false
+  const type = col.type.toLowerCase()
+  return type.includes('int') || type.includes('real') || type.includes('float') || 
+         type.includes('double') || type.includes('numeric') || type.includes('decimal')
+}
+
+// 构建单个条件的 SQL
+function buildConditionSQL(condition) {
+  const { column, operator, value } = condition
+  if (!column || !operator) return ''
+  
+  if (operator === 'IS NULL' || operator === 'IS NOT NULL') {
+    return `${column} ${operator}`
+  }
+  
+  if (operator === 'LIKE' || operator === 'NOT LIKE') {
+    return `${column} ${operator} '%${value}%'`
+  }
+  
+  // 数值类型不加引号，字符串加引号
+  if (isNumericType(column)) {
+    return `${column} ${operator} ${value}`
+  }
+  
+  return `${column} ${operator} '${String(value).replace(/'/g, "''")}'`
+}
+
+// 构建完整的 WHERE 子句
+const builtWhereClause = computed(() => {
+  const validConditions = store.queryConditions
+    .map(c => buildConditionSQL(c))
+    .filter(sql => sql !== '')
+  
+  if (validConditions.length === 0) return ''
+  return validConditions.join(` ${store.queryLogic} `)
+})
+
+// 添加条件
+function addCondition() {
+  store.queryConditions.push({
+    column: '',
+    operator: '=',
+    value: ''
+  })
+}
+
+// 删除条件
+function removeCondition(index) {
+  store.queryConditions.splice(index, 1)
+}
+
+function toggleQueryPanel() {
+  showQueryPanel.value = !showQueryPanel.value
+}
+
+function applyQuery() {
+  store.queryWhere = builtWhereClause.value
+  store.executeQuery()
+  // 不关闭面板，方便用户修改条件再次查询
+}
+
+function clearQuery() {
+  store.clearQuery()
+  showQueryPanel.value = false
+}
+
+function handleKeydown(e) {
+  if (e.key === 'Enter' && editingCell.value) {
+    saveEdit()
+  } else if (e.key === 'Escape') {
+    cancelEdit()
+  }
+}
+
+// SQL 执行
+function toggleSqlPanel() {
+  showSqlPanel.value = !showSqlPanel.value
+  if (showSqlPanel.value) {
+    sqlInput.value = ''
+    sqlResult.value = null
+  }
+}
+
+async function executeSql() {
+  if (!sqlInput.value.trim()) {
+    toast.warning('请输入 SQL 语句')
+    return
+  }
+  
+  sqlLoading.value = true
+  sqlResult.value = null
+  
+  try {
+    const response = await queryApi.execute(sqlInput.value)
+    sqlResult.value = response.data
+    
+    if (response.data.type === 'select') {
+      toast.success(`查询完成，共 ${response.data.data.length} 条记录`)
+    } else {
+      toast.success(`执行成功，影响 ${response.data.rowsAffected} 行`)
+    }
+  } catch (error) {
+    toast.error(error.response?.data?.error || 'SQL 执行失败')
+    sqlResult.value = { error: error.response?.data?.error || 'SQL 执行失败' }
+  } finally {
+    sqlLoading.value = false
+  }
+}
+
+function clearSqlResult() {
+  sqlInput.value = ''
+  sqlResult.value = null
+}
 
 // 监听 showAddRow，打开时聚焦第一个输入框
 watch(showAddRow, (newVal) => {
@@ -29,14 +184,6 @@ watch(showAddRow, (newVal) => {
       firstInputRef.value?.focus()
     })
   }
-})
-
-const columnOptions = computed(() => {
-  if (!store.currentSchema) return []
-  return store.currentSchema.columns.map(col => ({
-    value: col.name,
-    label: col.name
-  }))
 })
 
 function startEdit(row, column) {
@@ -58,14 +205,6 @@ async function saveEdit() {
   
   await store.updateRow(store.primaryKey, pkValue, newData)
   cancelEdit()
-}
-
-function handleKeydown(e) {
-  if (e.key === 'Enter') {
-    saveEdit()
-  } else if (e.key === 'Escape') {
-    cancelEdit()
-  }
 }
 
 function confirmDelete(row) {
@@ -142,6 +281,13 @@ function exportCSV() {
         <p class="text-sm text-slate-500">共 {{ store.totalRows }} 行</p>
       </div>
       <div class="flex items-center gap-2">
+        <Button size="small" variant="secondary" @click="toggleQueryPanel">
+          <Search class="w-4 h-4" />
+          查询
+          <span v-if="store.hasQueryCondition" class="ml-1 px-1.5 py-0.5 bg-primary-500/30 text-primary-400 text-xs rounded">
+            有条件
+          </span>
+        </Button>
         <Button size="small" @click="showAddRow = true">
           <Plus class="w-4 h-4" />
           新增
@@ -150,6 +296,90 @@ function exportCSV() {
           <Download class="w-4 h-4" />
           导出
         </Button>
+        <Button size="small" variant="secondary" @click="toggleSqlPanel">
+          <Terminal class="w-4 h-4" />
+          SQL
+        </Button>
+      </div>
+    </div>
+
+    <!-- 查询条件面板 -->
+    <div v-if="showQueryPanel" class="mb-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-sm text-slate-300">查询条件</span>
+        <Select
+          v-model="queryLogic"
+          :options="logicOptions"
+          class="w-24"
+        />
+        <Button size="small" variant="secondary" @click="addCondition">
+          <Plus class="w-4 h-4" />
+          添加条件
+        </Button>
+      </div>
+      
+      <!-- 条件列表 -->
+      <div class="space-y-2">
+        <div 
+          v-for="(condition, index) in store.queryConditions" 
+          :key="index"
+          class="flex items-center gap-2 flex-wrap"
+        >
+          <!-- 逻辑连接符 -->
+          <span v-if="index > 0" class="text-sm text-primary-400 font-medium min-w-[40px]">
+            {{ store.queryLogic }}
+          </span>
+          
+          <Select
+            v-model="condition.column"
+            :options="columnOptions"
+            placeholder="字段"
+            class="w-36"
+          />
+          <Select
+            v-model="condition.operator"
+            :options="operators"
+            class="w-32"
+          />
+          <Input
+            v-if="condition.operator !== 'IS NULL' && condition.operator !== 'IS NOT NULL'"
+            v-model="condition.value"
+            placeholder="值"
+            class="flex-1 min-w-[120px]"
+            @keyup.enter="applyQuery"
+          />
+          <button
+            @click="removeCondition(index)"
+            class="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+            title="删除条件"
+          >
+            <X class="w-4 h-4" />
+          </button>
+        </div>
+        
+        <!-- 空状态 -->
+        <div v-if="store.queryConditions.length === 0" class="text-sm text-slate-500 py-2">
+          点击"添加条件"开始查询
+        </div>
+      </div>
+      
+      <!-- SQL 预览和操作按钮 -->
+      <div class="flex items-center justify-between mt-4 pt-3 border-t border-slate-700">
+        <div v-if="builtWhereClause" class="text-xs text-slate-400 flex-1 mr-4">
+          <span class="text-slate-500">WHERE:</span>
+          <code class="bg-slate-700 px-1.5 py-0.5 rounded ml-1">{{ builtWhereClause }}</code>
+        </div>
+        <div v-else class="flex-1"></div>
+        <div class="flex items-center gap-2">
+          <Button size="small" variant="secondary" @click="clearQuery">
+            <XCircle class="w-4 h-4" />
+            清除
+          </Button>
+          <Button size="small" @click="applyQuery" :disabled="!builtWhereClause">
+            <Search class="w-4 h-4" />
+            查询
+          </Button>
+        </div>
       </div>
     </div>
 
@@ -278,6 +508,106 @@ function exportCSV() {
         </div>
       </template>
     </Modal>
+
+    <!-- SQL 执行弹窗 - 全屏 -->
+    <Teleport to="body">
+      <div v-if="showSqlPanel" class="fixed inset-0 z-50 bg-slate-900/95 flex flex-col">
+        <!-- 头部 -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+          <h2 class="text-lg font-semibold text-slate-100">SQL 执行器</h2>
+          <button
+            @click="showSqlPanel = false"
+            class="p-2 text-slate-400 hover:text-slate-100 hover:bg-slate-700 rounded-lg transition-colors"
+          >
+            <X class="w-5 h-5" />
+          </button>
+        </div>
+        
+        <!-- SQL 输入区 -->
+        <div class="px-6 py-4 border-b border-slate-700 bg-slate-800/50">
+          <div class="flex gap-2 mb-2">
+            <Button @click="executeSql" :disabled="sqlLoading || !sqlInput.trim()">
+              <Terminal class="w-4 h-4" />
+              {{ sqlLoading ? '执行中...' : '执行 (Ctrl+Enter)' }}
+            </Button>
+            <Button variant="secondary" @click="clearSqlResult">
+              <XCircle class="w-4 h-4" />
+              清空
+            </Button>
+          </div>
+          <textarea
+            v-model="sqlInput"
+            rows="3"
+            placeholder="输入 SQL 语句，如: SELECT * FROM users WHERE id > 10"
+            class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+            @keydown.ctrl.enter="executeSql"
+          ></textarea>
+          <p class="text-xs text-slate-500 mt-1">支持 SELECT、INSERT、UPDATE、DELETE、PRAGMA 等语句 (Ctrl+Enter 执行)</p>
+        </div>
+        
+        <!-- 结果区 -->
+        <div class="flex-1 overflow-hidden p-6">
+          <div v-if="sqlLoading" class="flex items-center justify-center h-full">
+            <Loader class="w-8 h-8 text-primary-400 animate-spin" />
+          </div>
+          
+          <div v-else-if="sqlResult">
+            <div v-if="sqlResult.error" class="h-full p-6 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <p class="text-red-400 text-lg font-medium">执行错误</p>
+              <p class="text-red-300 text-sm mt-2 font-mono">{{ sqlResult.error }}</p>
+            </div>
+            
+            <div v-else-if="sqlResult.type === 'select'" class="h-full flex flex-col">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-sm text-slate-400">查询结果 ({{ sqlResult.data.length }} 行)</span>
+              </div>
+              <div class="flex-1 overflow-auto border border-slate-700 rounded-lg">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-800 sticky top-0">
+                    <tr>
+                      <th
+                        v-for="col in (sqlResult.data[0] ? Object.keys(sqlResult.data[0]) : [])"
+                        :key="col"
+                        class="px-4 py-3 text-left font-medium text-slate-300 border-b border-slate-700 whitespace-nowrap"
+                      >
+                        {{ col }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(row, index) in sqlResult.data"
+                      :key="index"
+                      class="hover:bg-slate-800/50"
+                    >
+                      <td
+                        v-for="col in Object.keys(row)"
+                        :key="col"
+                        class="px-4 py-2 border-b border-slate-700/50 max-w-xs truncate"
+                      >
+                        <span :class="row[col] === null ? 'text-slate-500 italic' : 'text-slate-300'">
+                          {{ row[col] === null ? 'NULL' : row[col] }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <div v-else class="p-6 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+              <p class="text-emerald-400 text-lg">
+                执行成功，影响 <span class="font-medium">{{ sqlResult.rowsAffected }}</span> 行
+              </p>
+            </div>
+          </div>
+          
+          <div v-else class="flex items-center justify-center h-full text-slate-500">
+            输入 SQL 语句并点击执行按钮查看结果
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <ConfirmDialog
       :show="showDeleteConfirm"
