@@ -1,5 +1,5 @@
 appname               = techfunway-sqlite-manage
-version               = 1.0.0
+version               = 1.1.0
 display_name          = Sqlite管理工具
 desc                  = SQLite Web 数据库管理工具 - 支持数据库浏览、表结构查看、数据编辑等功能
 platform              = x86
@@ -12,5 +12,6 @@ desktop_uidir         = ui
 desktop_applaunchname = techfunway-sqlite-manage.Application
 changelog             = """
 1. 新增：飞牛右键打开【.db、.db3、.sqlite、.sqlite3】数据库
-2. 优化：输入框焦点定位、支持按回车确定
+2. 新增：数据查询功能、sql语句执行功能
+3. 优化：输入框焦点定位、支持按回车确定
 """
