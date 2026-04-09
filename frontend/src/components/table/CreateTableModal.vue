@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { Plus, Trash2 } from 'lucide-vue-next'
 import Modal from '../common/Modal.vue'
 import Input from '../common/Input.vue'
@@ -16,6 +16,7 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const tableName = ref('')
+const tableNameRef = ref(null)
 const columns = ref([
   { name: '', type: 'INTEGER', nullable: false, primaryKey: true, defaultValue: null }
 ])
@@ -40,6 +41,9 @@ watch(() => props.show, (newVal) => {
   if (newVal) {
     tableName.value = ''
     columns.value = [{ name: '', type: 'INTEGER', nullable: false, primaryKey: true, defaultValue: null }]
+    nextTick(() => {
+      tableNameRef.value?.focus()
+    })
   }
 })
 
@@ -76,10 +80,13 @@ async function createTable() {
   <Modal :show="show" title="创建表" size="large" @close="emit('close')">
     <div class="space-y-4">
       <Input
+        ref="tableNameRef"
         v-model="tableName"
         label="表名"
         placeholder="请输入表名"
         required
+        autofocus
+        @keyup.enter="createTable"
       />
 
       <div>
@@ -101,6 +108,7 @@ async function createTable() {
               v-model="column.name"
               placeholder="字段名"
               class="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              autofocus
             />
             <select
               v-model="column.type"

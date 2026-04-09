@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDatabaseStore } from '../stores/database'
 import { useToastStore } from '../stores/toast'
@@ -29,6 +29,7 @@ const fileInput = ref(null)
 const showBrowseModal = ref(false)
 const showCreateModal = ref(false)
 const newDbName = ref('')
+const newDbInputRef = ref(null)
 const isDragging = ref(false)
 
 // 监听当前表变化，自动切换到数据Tab
@@ -152,6 +153,9 @@ function handleDragLeave() {
 function openCreateModal() {
   newDbName.value = ''
   showCreateModal.value = true
+  nextTick(() => {
+    newDbInputRef.value?.focus()
+  })
 }
 
 async function handleCreateDatabase() {
@@ -367,10 +371,13 @@ function formatSharePath(path) {
     <Modal :show="showCreateModal" title="新建数据库" @close="showCreateModal = false">
       <div class="space-y-4">
         <Input
+          ref="newDbInputRef"
           v-model="newDbName"
           label="数据库名称"
           placeholder="例如: my_database"
           required
+          autofocus
+          @keyup.enter="handleCreateDatabase"
         />
         <p class="text-xs text-slate-500">
           数据库将保存到 <code class="bg-slate-700 px-1 py-0.5 rounded">databases/</code> 目录
