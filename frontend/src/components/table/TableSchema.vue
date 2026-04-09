@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import { useDatabaseStore } from '../../stores/database'
 import { Plus, Trash2, Key, Hash, Type, ToggleLeft, List, Calendar, Check } from 'lucide-vue-next'
 import Button from '../common/Button.vue'
@@ -23,12 +23,14 @@ const newColumn = ref({
   primaryKey: false,
   defaultValue: null
 })
+const columnNameRef = ref(null)
 
 const newIndex = ref({
   name: '',
   columns: [],
   unique: false
 })
+const indexNameRef = ref(null)
 
 const sqlTypes = [
   { value: 'TEXT', label: 'TEXT' },
@@ -67,6 +69,9 @@ function openAddColumn() {
     defaultValue: null
   }
   showAddColumn.value = true
+  nextTick(() => {
+    columnNameRef.value?.focus()
+  })
 }
 
 async function addColumn() {
@@ -83,6 +88,9 @@ function openAddIndex() {
     unique: false
   }
   showAddIndex.value = true
+  nextTick(() => {
+    indexNameRef.value?.focus()
+  })
 }
 
 async function addIndex() {
@@ -216,10 +224,13 @@ async function deleteItem() {
     <Modal :show="showAddColumn" title="添加字段" @close="showAddColumn = false">
       <div class="space-y-4">
         <Input
+          ref="columnNameRef"
           v-model="newColumn.name"
           label="字段名"
           placeholder="请输入字段名"
           required
+          autofocus
+          @keyup.enter="addColumn"
         />
         <Select
           v-model="newColumn.type"
@@ -262,10 +273,13 @@ async function deleteItem() {
     <Modal :show="showAddIndex" title="添加索引" @close="showAddIndex = false">
       <div class="space-y-4">
         <Input
+          ref="indexNameRef"
           v-model="newIndex.name"
           label="索引名"
           placeholder="请输入索引名"
           required
+          autofocus
+          @keyup.enter="addIndex"
         />
         <div class="space-y-2">
           <label class="block text-sm font-medium text-slate-300">选择字段</label>
