@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useDatabaseStore } from '../../stores/database'
 import { Plus, Trash2, Edit3, Check, X, ChevronLeft, ChevronRight, Download, Upload } from 'lucide-vue-next'
 import Button from '../common/Button.vue'
@@ -14,11 +14,22 @@ const editingCell = ref(null)
 const editValue = ref('')
 const showAddRow = ref(false)
 const newRow = ref({})
+const firstInputRef = ref(null)
 const showDeleteConfirm = ref(false)
 const rowToDelete = ref(null)
 const pageInput = ref('1')
 
 const totalPages = computed(() => Math.ceil(store.totalRows / store.pageSize) || 1)
+
+// 监听 showAddRow，打开时聚焦第一个输入框
+watch(showAddRow, (newVal) => {
+  if (newVal) {
+    newRow.value = {}
+    nextTick(() => {
+      firstInputRef.value?.focus()
+    })
+  }
+})
 
 const columnOptions = computed(() => {
   if (!store.currentSchema) return []
@@ -250,11 +261,14 @@ function exportCSV() {
     <Modal :show="showAddRow" title="新增数据" @close="showAddRow = false">
       <div class="space-y-3">
         <Input
-          v-for="column in store.currentSchema?.columns"
+          v-for="(column, index) in store.currentSchema?.columns"
           :key="column.name"
+          :ref="index === 0 ? 'firstInputRef' : undefined"
           :label="column.name + ' (' + column.type + ')'"
           v-model="newRow[column.name]"
           :placeholder="column.nullable ? 'NULL' : ''"
+          :autofocus="index === 0"
+          @keyup.enter="addRow"
         />
       </div>
       <template #footer>
