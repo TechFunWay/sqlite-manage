@@ -63,7 +63,7 @@
         <header>
             <div class="logo">🐳</div>
             <h1>SQLite Manager</h1>
-            <p class="subtitle">Docker 部署指南 v1.0.0</p>
+            <p class="subtitle">Docker 部署指南 v1.1.0</p>
         </header>
 
         <h2>📦 镜像信息</h2>
@@ -71,7 +71,7 @@
             <table>
                 <tr><th>属性</th><th>值</th></tr>
                 <tr><td>镜像名称</td><td><code>techfunways/sqlite-manage</code></td></tr>
-                <tr><td>版本</td><td><code>v1.0.0</code> / <code>latest</code></td></tr>
+                <tr><td>版本</td><td><code>v1.1.0</code> / <code>latest</code></td></tr>
                 <tr><td>架构</td><td>linux/amd64 + linux/arm64 <span class="tag">多平台</span></td></tr>
                 <tr><td>基础镜像</td><td>scratch（最小化，仅 ~12MB）</td></tr>
                 <tr><td>默认端口</td><td>8080</td></tr>
@@ -81,7 +81,7 @@
         <h2>🚀 快速开始</h2>
         <div class="card">
             <h4>一行命令启动</h4>
-            <pre><code>docker run -d --name sqlite-manager -p 8080:8080 -v ./data:/data techfunways/sqlite-manage:v1.0.0</code></pre>
+            <pre><code>docker run -d --name sqlite-manager -p 8080:8080 -v ./data:/data techfunways/sqlite-manage:v1.1.0</code></pre>
             <p style="margin-top: 12px;">访问 <span class="highlight">http://localhost:8080</span> 即可使用。</p>
         </div>
 
@@ -121,7 +121,7 @@
   --name sqlite-manager \
   -p 8080:8080 \
   -v ./data:/data \
-  techfunways/sqlite-manage:v1.0.0</code></pre>
+  techfunways/sqlite-manage:v1.1.0</code></pre>
             </div>
             <div class="card">
                 <h4>指定端口</h4>
@@ -129,7 +129,7 @@
   --name sqlite-manager \
   -p 3000:3000 \
   -v ./data:/data \
-  techfunways/sqlite-manage:v1.0.0 \
+  techfunways/sqlite-manage:v1.1.0 \
   -port 3000</code></pre>
             </div>
             <div class="card">
@@ -160,7 +160,7 @@ docker start sqlite-manager</code></pre>
 
 services:
   sqlite-manager:
-    image: techfunways/sqlite-manage:v1.0.0
+    image: techfunways/sqlite-manage:v1.1.0
     container_name: sqlite-manager
     ports:
       - "8080:8080"
@@ -258,7 +258,7 @@ docker rm sqlite-manager</code></pre>
         </div>
 
         <footer>
-            <p><strong>SQLite Manager v1.0.0</strong></p>
+            <p><strong>SQLite Manager v1.1.0</strong></p>
             <p>Docker 部署指南</p>
             <p style="margin-top: 8px;">© 2026 科技智趣坊</p>
         </footer>
