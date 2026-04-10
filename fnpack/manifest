@@ -1,6 +1,6 @@
 appname               = techfunway-sqlite-manage
 version               = 1.1.0
-display_name          = Sqlite管理工具
+display_name          = SQLite管理工具
 desc                  = SQLite Web 数据库管理工具 - 支持数据库浏览、表结构查看、数据编辑等功能
 platform              = x86
 source                = thirdparty
