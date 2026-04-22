@@ -1,0 +1,6 @@
+{
+  "envId": "code-buddy-wei-1gpibyda029a37b5",
+  "cloudrun": {
+    "name": "sqlite-manager-backend"
+  }
+}
