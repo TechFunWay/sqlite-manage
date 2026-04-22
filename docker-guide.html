@@ -74,15 +74,15 @@
                 <tr><td>版本</td><td><code>v1.1.0</code> / <code>latest</code></td></tr>
                 <tr><td>架构</td><td>linux/amd64 + linux/arm64 <span class="tag">多平台</span></td></tr>
                 <tr><td>基础镜像</td><td>scratch（最小化，仅 ~12MB）</td></tr>
-                <tr><td>默认端口</td><td>8080</td></tr>
+                <tr><td>默认端口</td><td>8903</td></tr>
             </table>
         </div>
 
         <h2>🚀 快速开始</h2>
         <div class="card">
             <h4>一行命令启动</h4>
-            <pre><code>docker run -d --name sqlite-manager -p 8080:8080 -v ./data:/data techfunways/sqlite-manage:v1.1.0</code></pre>
-            <p style="margin-top: 12px;">访问 <span class="highlight">http://localhost:8080</span> 即可使用。</p>
+            <pre><code>docker run -d --name sqlite-manager -p 8903:8903 -v ./data:/data techfunways/sqlite-manage:v1.1.0</code></pre>
+            <p style="margin-top: 12px;">访问 <span class="highlight">http://localhost:8903</span> 即可使用。</p>
         </div>
 
         <h2>📁 目录结构</h2>
@@ -106,7 +106,7 @@
         <div class="card">
             <table>
                 <tr><th>参数</th><th>默认值</th><th>说明</th></tr>
-                <tr><td><code>-port</code></td><td>8080</td><td>服务端口</td></tr>
+                <tr><td><code>-port</code></td><td>8903</td><td>服务端口</td></tr>
                 <tr><td><code>-data-dir</code></td><td>/data</td><td>数据目录</td></tr>
                 <tr><td><code>-upload-dir</code></td><td>/data/upload</td><td>上传目录</td></tr>
                 <tr><td><code>-web-dir</code></td><td>/app/www</td><td>静态资源目录</td></tr>
@@ -119,7 +119,7 @@
                 <h4>启动容器</h4>
                 <pre><code>docker run -d \
   --name sqlite-manager \
-  -p 8080:8080 \
+  -p 8903:8903 \
   -v ./data:/data \
   techfunways/sqlite-manage:v1.1.0</code></pre>
             </div>
@@ -163,7 +163,7 @@ services:
     image: techfunways/sqlite-manage:v1.1.0
     container_name: sqlite-manager
     ports:
-      - "8080:8080"
+      - "8903:8903"
     volumes:
       - ./data:/data
     restart: unless-stopped</code></pre>
@@ -174,7 +174,7 @@ services:
         <div class="steps">
             <div class="step">
                 <h4>访问应用</h4>
-                <p>打开浏览器访问 <code>http://localhost:8080</code></p>
+                <p>打开浏览器访问 <code>http://localhost:8903</code></p>
             </div>
             <div class="step">
                 <h4>创建管理员账号</h4>
@@ -220,7 +220,7 @@ docker rm sqlite-manager</code></pre>
                 <h4>启动新容器</h4>
                 <pre><code>docker run -d \
   --name sqlite-manager \
-  -p 8080:8080 \
+  -p 8903:8903 \
   -v ./data:/data \
   techfunways/sqlite-manage:latest</code></pre>
             </div>
@@ -235,7 +235,7 @@ docker rm sqlite-manager</code></pre>
                 <tr><td>页面 404</td><td>检查 <code>/data</code> 目录是否正确挂载</td></tr>
                 <tr><td>无法创建数据库</td><td>确保 <code>./data</code> 目录有写权限：<code>chmod 777 ./data</code></td></tr>
                 <tr><td>容器启动失败</td><td>查看日志：<code>docker logs sqlite-manager</code></td></tr>
-                <tr><td>端口冲突</td><td>修改端口：<code>-p 3000:8080</code></td></tr>
+                <tr><td>端口冲突</td><td>修改端口：<code>-p 3000:8903</code></td></tr>
                 <tr><td>忘记密码</td><td>运行：<code>docker exec -it sqlite-manager /app/sqlite-manager reset-password</code></td></tr>
             </table>
         </div>

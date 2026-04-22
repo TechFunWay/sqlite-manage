@@ -53,7 +53,7 @@ npm install
 cd backend
 ./sqlite-manager
 ```
-后端服务将在 http://localhost:8080 启动，并自动打开浏览器。
+后端服务将在 http://localhost:8903 启动，并自动打开浏览器。
 
 **4. 启动前端开发服务器 (可选)**
 ```bash
@@ -178,6 +178,44 @@ cd backend
 go mod tidy
 go run main.go
 ```
+
+## 云端部署 (CloudBase)
+
+### 腾讯云 CloudBase 部署
+
+**环境信息:**
+- 环境 ID: `code-buddy-wei-1gpibyda029a37b5`
+- 区域: `ap-shanghai`
+- 版本: v1.1.0
+
+**服务地址:**
+
+| 服务 | 类型 | 地址 |
+|------|------|------|
+| 前端 | 静态托管 | https://code-buddy-wei-1gpibyda029a37b5-1251585624.tcloudbaseapp.com/ |
+| 后端 API | 云托管 Cloud Run | https://sqlite-manager-backend-244964-5-1251585624.sh.run.tcloudbase.com |
+
+**部署架构:**
+```
+用户浏览器
+    ↓
+静态托管 (前端 Vue)
+    ↓ API 请求
+云托管 Cloud Run (后端 Go/Gin)
+    ↓
+SQLite 数据库 (本地文件)
+```
+
+**后端配置:**
+- 服务名称: `sqlite-manager-backend`
+- 端口: `8903`
+- 资源规格: 0.5 CPU / 1GB 内存
+- 最小实例数: 1
+- 配置文件: `backend/Dockerfile`
+
+**控制台管理:**
+- [云托管控制台](https://tcb.cloud.tencent.com/dev#/platform-run/service/detail?id=sqlite-manager-backend&NameSpace=code-buddy-wei-1gpibyda029a37b5)
+- [静态托管控制台](https://tcb.cloud.tencent.com/dev#/static-hosting)
 
 ## License
 
