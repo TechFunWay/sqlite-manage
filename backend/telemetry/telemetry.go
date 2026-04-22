@@ -14,32 +14,35 @@ import (
 
 const (
 	// 统计地址
-	Endpoint = "http://page.wycto.cc/api/apps.online/refresh"
+	Endpoint = "http://techfunway.wycto.cn/api/apps.online/refresh"
 	// 发送间隔 (60分钟)
 	SendInterval = 60 * time.Minute
 )
 
 // TelemetryData 统计数据
 type TelemetryData struct {
-	AppName  string `json:"app_name"`
-	Version  string `json:"version"`
-	DeviceID string `json:"device_id"`
-	OS       string `json:"os"`
-	Arch     string `json:"arch"`
-	Hostname string `json:"hostname"`
+	AppName    string `json:"app_name"`
+	Version    string `json:"version"`
+	DeviceID   string `json:"device_id"`
+	DeviceType string `json:"device_type"`
+	OS         string `json:"os"`
+	Arch       string `json:"arch"`
+	Hostname   string `json:"hostname"`
 }
 
 var (
-	deviceID string
-	hostname string
-	appName  = "sqlite-manage"
-	version  string
-	stopChan chan struct{}
+	deviceID   string
+	hostname   string
+	deviceType string
+	appName    = "sqlite-manage"
+	version    string
+	stopChan   chan struct{}
 )
 
 // Init 初始化统计模块
-func Init(appVer string) {
+func Init(appVer string, devType string) {
 	version = appVer
+	deviceType = devType
 
 	// 生成设备ID
 	deviceID = generateDeviceID()
@@ -91,12 +94,13 @@ func getMacAddress() string {
 // collectData 收集统计数据
 func collectData() TelemetryData {
 	return TelemetryData{
-		AppName:  appName,
-		Version:  "v" + version,
-		DeviceID: deviceID,
-		OS:       runtime.GOOS,
-		Arch:     runtime.GOARCH,
-		Hostname: hostname,
+		AppName:    appName,
+		Version:    "v" + version,
+		DeviceID:   deviceID,
+		DeviceType: deviceType,
+		OS:         runtime.GOOS,
+		Arch:       runtime.GOARCH,
+		Hostname:   hostname,
 	}
 }
 
