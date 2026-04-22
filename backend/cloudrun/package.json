@@ -1,0 +1,10 @@
+{
+  "name": "sqlite-manager-backend",
+  "version": "1.1.0",
+  "description": "SQLite Manager Backend",
+  "main": "index.js",
+  "scripts": {
+    "start": "./sqlite-manager"
+  },
+  "dependencies": {}
+}
