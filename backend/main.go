@@ -15,15 +15,16 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
-	_ "modernc.org/sqlite"
 	"sqlite-manager/auth"
 	"sqlite-manager/config"
 	"sqlite-manager/handlers"
 	"sqlite-manager/telemetry"
 	"sqlite-manager/upgrade"
 	"sqlite-manager/utils"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	_ "modernc.org/sqlite"
 )
 
 // AppVersion 应用版本号
@@ -37,11 +38,12 @@ var (
 
 func main() {
 	// 解析命令行参数
-	port := flag.String("port", "", "服务端口 (默认: 8080)")
+	port := flag.String("port", "", "服务端口 (默认: 8903)")
 	dataDir := flag.String("data-dir", "", "数据目录 (默认: ./data)")
 	webDir := flag.String("web-dir", "", "静态资源目录 (默认: ./public)")
 	uploadDir := flag.String("upload-dir", "", "上传目录 (默认: ./upload)")
 	shareDirs := flag.String("share-dirs", "", "共享目录 (冒号分隔)")
+	deviceType := flag.String("device-type", "", "设备类型 (如 fnos、docker)")
 	noBrowser := flag.Bool("no-browser", false, "不自动打开浏览器")
 	flag.Parse()
 
@@ -132,7 +134,7 @@ func main() {
 	}
 
 	// 初始化并启动统计（静默，每60分钟上报一次）
-	telemetry.Init(AppVersion)
+	telemetry.Init(AppVersion, *deviceType)
 	telemetry.Start()
 	defer telemetry.Stop()
 
@@ -432,10 +434,11 @@ func printHelp() {
   help             显示帮助信息
 
 选项:
-  -port string           服务端口 (默认: 8080，也可用 PORT 环境变量)
+  -port string           服务端口 (默认: 8903，也可用 PORT 环境变量)
   -data-dir string       数据目录 (默认: ./data，也可用 SQLITE_DATA_DIR 环境变量)
   -web-dir string        静态资源目录 (默认: ./public，也可用 SQLITE_WEB_DIR 环境变量)
   -upload-dir string     上传目录 (默认: ./upload，也可用 SQLITE_UPLOAD_DIR 环境变量)
+  -device-type string    设备类型 (如 fnos、docker)
   -no-browser            不自动打开浏览器
 
 示例:

@@ -44,14 +44,14 @@ COPY techfunway-sqlite-manage-${VERSION}-linux-${TARGETARCH}/sqlite-manager /app
 COPY techfunway-sqlite-manage-${VERSION}-linux-${TARGETARCH}/www /app/www
 
 VOLUME ["/data"]
-EXPOSE 8080
+EXPOSE 8903
 
 ENV SQLITE_DATA_DIR=/data
 ENV SQLITE_UPLOAD_DIR=/data/upload
 ENV SQLITE_WEB_DIR=/app/www
 
 ENTRYPOINT ["/app/sqlite-manager"]
-CMD ["-port", "8080", "-data-dir", "/data", "-upload-dir", "/data/upload", "-web-dir", "/app/www"]
+CMD ["-port", "8903", "-data-dir", "/data", "-upload-dir", "/data/upload", "-web-dir", "/app/www", "-device-type", "docker"]
 EOF
 
 # 构建多平台镜像
@@ -73,4 +73,4 @@ echo ""
 echo "📦 本地镜像:"
 docker images "${IMAGE_NAME}" --format "  {{.Repository}}:{{.Tag}}" | sort -u
 echo ""
-echo "💡 运行: docker run -p 8080:8080 -v ./data:/data ${IMAGE_NAME}:v${VERSION}"
+echo "💡 运行: docker run -p 8903:8903 -v ./data:/data ${IMAGE_NAME}:v${VERSION}"
