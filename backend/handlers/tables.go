@@ -22,6 +22,13 @@ func GetTableSchema(c *gin.Context) {
 		return
 	}
 
+	comments := database.GetColumnComments(tableName)
+	for i := range schema.Columns {
+		if comment, ok := comments[schema.Columns[i].Name]; ok {
+			schema.Columns[i].Comment = comment
+		}
+	}
+
 	c.JSON(http.StatusOK, schema)
 }
 
@@ -45,12 +52,18 @@ func CreateTable(c *gin.Context) {
 			Nullable:     col.Nullable,
 			DefaultValue: col.DefaultValue,
 			PrimaryKey:   col.PrimaryKey,
+			Comment:      "",
+		}
+		if col.Comment != nil {
+			dbColumns[i].Comment = *col.Comment
 		}
 	}
 	if err := database.CreateTable(req.Name, dbColumns); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	database.SaveColumnComments(req.Name, dbColumns)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Table created successfully"})
 }
@@ -116,9 +129,16 @@ func AddColumn(c *gin.Context) {
 		DefaultValue: reqColumn.DefaultValue,
 		PrimaryKey:   reqColumn.PrimaryKey,
 	}
+	if reqColumn.Comment != nil {
+		column.Comment = *reqColumn.Comment
+	}
 	if err := database.AddColumn(tableName, column); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	if column.Comment != "" {
+		database.SaveColumnComments(tableName, []database.Column{column})
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Column added successfully"})

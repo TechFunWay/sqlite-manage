@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { databaseApi, tableApi, dataApi } from '../api'
+import { databaseApi, tableApi, dataApi, downloadApi } from '../api'
 import { useToastStore } from './toast'
 
 export const useDatabaseStore = defineStore('database', () => {
@@ -267,7 +267,15 @@ export const useDatabaseStore = defineStore('database', () => {
 
   async function createTable(name, columns) {
     try {
-      await tableApi.create({ name, columns })
+      const formattedColumns = columns.map(col => ({
+        name: col.name,
+        type: col.type,
+        comment: col.comment || null,
+        nullable: col.nullable,
+        primaryKey: col.primaryKey,
+        defaultValue: col.defaultValue
+      }))
+      await tableApi.create({ name, columns: formattedColumns })
       await loadTables()
       toast.success('Table created successfully')
       return true
@@ -342,6 +350,74 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
+  async function importTableData(name, format, data) {
+    try {
+      let response
+      if (format === 'json') {
+        response = await dataApi.importJSON(name, data)
+      } else if (format === 'csv') {
+        response = await dataApi.importCSV(name, data)
+      }
+      await selectTable(name)
+      toast.success(response.data?.message || '导入成功')
+      return response.data
+    } catch (error) {
+      toast.error(error.response?.data?.error || '导入失败')
+      return null
+    }
+  }
+
+  async function exportTableData(name, format) {
+    try {
+      let response
+      if (format === 'json') {
+        response = await dataApi.exportJSON(name)
+      } else if (format === 'csv') {
+        response = await dataApi.exportCSV(name)
+      }
+      
+      if (response) {
+        const blob = new Blob([response.data])
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${name}.${format}`
+        a.click()
+        URL.revokeObjectURL(url)
+        toast.success('导出成功')
+        return true
+      }
+      return false
+    } catch (error) {
+      toast.error(error.response?.data?.error || '导出失败')
+      return false
+    }
+  }
+
+  async function downloadDatabase() {
+    try {
+      const response = await downloadApi.downloadDatabase()
+      const blob = new Blob([response.data])
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const contentDisposition = response.headers['content-disposition']
+      let filename = 'database.db'
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?([^"]+)"?/)
+        if (match) filename = match[1]
+      }
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('数据库下载成功')
+      return true
+    } catch (error) {
+      toast.error(error.response?.data?.error || '数据库下载失败')
+      return false
+    }
+  }
+
   return {
     isConnected,
     databases,
@@ -381,6 +457,9 @@ export const useDatabaseStore = defineStore('database', () => {
     addColumn,
     dropColumn,
     createIndex,
-    dropIndex
+    dropIndex,
+    importTableData,
+    exportTableData,
+    downloadDatabase
   }
 })
