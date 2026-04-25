@@ -370,8 +370,12 @@ func startServer(shouldOpenBrowser bool) {
 		protectedAPI.PUT("/tables/:name/data", handlers.UpdateRow)
 		protectedAPI.DELETE("/tables/:name/data", handlers.DeleteRow)
 
+		protectedAPI.POST("/tables/:name/import", handlers.ImportData)
+		protectedAPI.GET("/tables/:name/export", handlers.ExportTableData)
 		protectedAPI.GET("/tables/:name/primarykey", handlers.GetPrimaryKey)
 		protectedAPI.POST("/query", handlers.ExecuteQuery)
+
+		protectedAPI.GET("/database/download", handlers.DownloadDatabase)
 	}
 
 	// SPA fallback
