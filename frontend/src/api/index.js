@@ -95,7 +95,27 @@ export const dataApi = {
   update: (name, primaryKey, pkValue, data) => 
     api.put(`/tables/${name}/data`, { primaryKey, pkValue, data }),
   delete: (name, primaryKey, pkValue) => 
-    api.delete(`/tables/${name}/data`, { data: { primaryKey, pkValue } })
+    api.delete(`/tables/${name}/data`, { data: { primaryKey, pkValue } }),
+  importJSON: (name, data) => api.post(`/tables/${name}/import?format=json`, data, {
+    headers: { 'Content-Type': 'application/json' }
+  }),
+  importCSV: (name, file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post(`/tables/${name}/import?format=csv`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  exportJSON: (name) => {
+    return api.get(`/tables/${name}/export?format=json`, { responseType: 'blob' })
+  },
+  exportCSV: (name) => {
+    return api.get(`/tables/${name}/export?format=csv`, { responseType: 'blob' })
+  }
+}
+
+export const downloadApi = {
+  downloadDatabase: () => api.get('/database/download', { responseType: 'blob' })
 }
 
 export const queryApi = {
