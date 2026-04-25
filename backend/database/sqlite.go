@@ -52,6 +52,7 @@ type Column struct {
 	Nullable     bool    `json:"nullable"`
 	DefaultValue *string `json:"defaultValue"`
 	PrimaryKey   bool    `json:"primaryKey"`
+	Comment      string  `json:"comment"`
 }
 
 type Index struct {
@@ -731,6 +732,56 @@ func GetColumnsForDrop(tableName string) ([]Column, error) {
 		columns = append(columns, col)
 	}
 	return columns, nil
+}
+
+func SaveColumnComments(tableName string, columns []Column) error {
+	db := getDB()
+	if db == nil {
+		return fmt.Errorf("no database connected")
+	}
+
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS "_column_comments" (
+		table_name TEXT NOT NULL,
+		column_name TEXT NOT NULL,
+		comment TEXT,
+		PRIMARY KEY (table_name, column_name)
+	)`)
+	if err != nil {
+		return err
+	}
+
+	for _, col := range columns {
+		if col.Comment != "" {
+			_, err = db.Exec(`INSERT OR REPLACE INTO "_column_comments" (table_name, column_name, comment) VALUES (?, ?, ?)`,
+				tableName, col.Name, col.Comment)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func GetColumnComments(tableName string) map[string]string {
+	db := getDB()
+	if db == nil {
+		return nil
+	}
+
+	comments := make(map[string]string)
+	rows, err := db.Query(`SELECT column_name, comment FROM "_column_comments" WHERE table_name = ?`, tableName)
+	if err != nil {
+		return comments
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var colName, comment string
+		if err := rows.Scan(&colName, &comment); err == nil {
+			comments[colName] = comment
+		}
+	}
+	return comments
 }
 
 func CreateIndex(tableName string, indexName string, columns []string, unique bool) error {

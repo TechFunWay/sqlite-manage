@@ -3,7 +3,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { useDatabaseStore } from '../../stores/database'
 import { useToastStore } from '../../stores/toast'
 import { queryApi } from '../../api'
-import { Plus, Trash2, Edit3, Check, X, ChevronLeft, ChevronRight, Download, Upload, Search, XCircle, Terminal, Loader } from 'lucide-vue-next'
+import { Plus, Trash2, Edit3, Check, X, ChevronLeft, ChevronRight, Download, Upload, Search, XCircle, Terminal, Loader, FileText, Database } from 'lucide-vue-next'
 import Button from '../common/Button.vue'
 import Modal from '../common/Modal.vue'
 import Input from '../common/Input.vue'
@@ -21,6 +21,17 @@ const firstInputRef = ref(null)
 const showDeleteConfirm = ref(false)
 const rowToDelete = ref(null)
 const pageInput = ref('1')
+
+const showImportModal = ref(false)
+const showExportModal = ref(false)
+const importFormat = ref('json')
+const importJsonData = ref('')
+const importCsvFile = ref(null)
+const importResult = ref(null)
+const importLoading = ref(false)
+
+const exportFormat = ref('json')
+const exportLoading = ref(false)
 
 // SQL 执行
 const showSqlPanel = ref(false)
@@ -55,9 +66,18 @@ const columnOptions = computed(() => {
   if (!store.currentSchema) return []
   return store.currentSchema.columns.map(col => ({
     value: col.name,
-    label: col.name + ' (' + col.type + ')'
+    label: col.name + (col.comment ? ` (${col.comment})` : '')
   }))
 })
+
+// 构建字段的 placeholder，优先使用备注
+function getColumnPlaceholder(col) {
+  if (col.comment) {
+    return col.comment
+  }
+  if (col.nullable) return 'NULL'
+  return ''
+}
 
 // 判断字段是否为数值类型
 function isNumericType(colName) {
@@ -271,6 +291,87 @@ function exportCSV() {
   a.click()
   URL.revokeObjectURL(url)
 }
+
+function openImportModal() {
+  showImportModal.value = true
+  importFormat.value = 'json'
+  importJsonData.value = ''
+  importCsvFile.value = null
+  importResult.value = null
+}
+
+function handleCsvFileChange(event) {
+  const file = event.target.files[0]
+  if (file) {
+    importCsvFile.value = file
+  }
+}
+
+async function doImport() {
+  if (importFormat.value === 'json') {
+    if (!importJsonData.value.trim()) {
+      toast.warning('请输入 JSON 数据')
+      return
+    }
+    let parsed
+    try {
+      parsed = JSON.parse(importJsonData.value)
+    } catch (e) {
+      toast.error('JSON 格式错误')
+      return
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      toast.warning('JSON 数据必须是一个非空数组')
+      return
+    }
+  } else if (importFormat.value === 'csv') {
+    if (!importCsvFile.value) {
+      toast.warning('请选择 CSV 文件')
+      return
+    }
+  }
+
+  importLoading.value = true
+  importResult.value = null
+  try {
+    let result
+    if (importFormat.value === 'json') {
+      const parsed = JSON.parse(importJsonData.value)
+      const response = await store.importTableData(store.currentTable, 'json', parsed)
+      result = response
+    } else {
+      const response = await store.importTableData(store.currentTable, 'csv', importCsvFile.value)
+      result = response
+    }
+    importResult.value = result
+    if (result && (result.imported > 0 || result.message)) {
+      toast.success(result.message || '导入完成')
+    }
+  } catch (error) {
+    toast.error('导入失败: ' + (error.response?.data?.error || error.message))
+  } finally {
+    importLoading.value = false
+  }
+}
+
+async function doExport(format) {
+  exportLoading.value = true
+  try {
+    await store.exportTableData(store.currentTable, format)
+  } catch (error) {
+    toast.error('导出失败')
+  } finally {
+    exportLoading.value = false
+  }
+}
+
+async function downloadDatabaseFile() {
+  try {
+    await store.downloadDatabase()
+  } catch (error) {
+    toast.error('下载失败')
+  }
+}
 </script>
 
 <template>
@@ -292,9 +393,29 @@ function exportCSV() {
           <Plus class="w-4 h-4" />
           新增
         </Button>
-        <Button size="small" variant="secondary" @click="exportCSV">
-          <Download class="w-4 h-4" />
-          导出
+        <Button size="small" variant="secondary" @click="openImportModal">
+          <Upload class="w-4 h-4" />
+          导入
+        </Button>
+        <div class="relative">
+          <Button size="small" variant="secondary" @click="showExportModal = !showExportModal">
+            <Download class="w-4 h-4" />
+            导出
+          </Button>
+          <div v-if="showExportModal" class="absolute right-0 mt-1 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50">
+            <button @click="doExport('json'); showExportModal = false" class="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 transition-colors rounded-t-lg">
+              <FileText class="w-4 h-4" />
+              导出为 JSON
+            </button>
+            <button @click="doExport('csv'); showExportModal = false" class="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 transition-colors rounded-b-lg">
+              <FileText class="w-4 h-4" />
+              导出为 CSV
+            </button>
+          </div>
+        </div>
+        <Button size="small" variant="secondary" @click="downloadDatabaseFile">
+          <Database class="w-4 h-4" />
+          下载数据库
         </Button>
         <Button size="small" variant="secondary" @click="toggleSqlPanel">
           <Terminal class="w-4 h-4" />
@@ -494,9 +615,9 @@ function exportCSV() {
           v-for="(column, index) in store.currentSchema?.columns"
           :key="column.name"
           :ref="index === 0 ? 'firstInputRef' : undefined"
-          :label="column.name + ' (' + column.type + ')'"
+          :label="column.name + (column.comment ? ` (${column.comment})` : '')"
           v-model="newRow[column.name]"
-          :placeholder="column.nullable ? 'NULL' : ''"
+          :placeholder="getColumnPlaceholder(column)"
           :autofocus="index === 0"
           @keyup.enter="addRow"
         />
@@ -505,6 +626,62 @@ function exportCSV() {
         <div class="flex justify-end gap-3">
           <Button variant="secondary" @click="showAddRow = false">取消</Button>
           <Button @click="addRow">新增</Button>
+        </div>
+      </template>
+    </Modal>
+
+    <Modal :show="showImportModal" title="导入数据" size="large" @close="showImportModal = false">
+      <div class="space-y-4">
+        <div class="flex gap-4">
+          <button 
+            @click="importFormat = 'json'"
+            :class="['flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors', importFormat === 'json' ? 'bg-primary-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600']"
+          >
+            JSON
+          </button>
+          <button 
+            @click="importFormat = 'csv'"
+            :class="['flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors', importFormat === 'csv' ? 'bg-primary-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600']"
+          >
+            CSV
+          </button>
+        </div>
+
+        <div v-if="importFormat === 'json'">
+          <label class="block text-sm font-medium text-slate-300 mb-2">JSON 数据</label>
+          <textarea
+            v-model="importJsonData"
+            rows="8"
+            placeholder='[{"name": "John", "age": 30}, {"name": "Jane", "age": 25}]'
+            class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+          ></textarea>
+          <p class="text-xs text-slate-500 mt-1">JSON 格式：对象数组，字段名需与表字段匹配</p>
+        </div>
+
+        <div v-if="importFormat === 'csv'">
+          <label class="block text-sm font-medium text-slate-300 mb-2">CSV 文件</label>
+          <input
+            type="file"
+            accept=".csv"
+            @change="handleCsvFileChange"
+            class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:text-sm file:bg-slate-600 file:text-slate-200 file:hover:bg-slate-500"
+          />
+          <p v-if="importCsvFile" class="text-xs text-slate-400 mt-1">已选择: {{ importCsvFile.name }}</p>
+          <p class="text-xs text-slate-500 mt-1">CSV 格式：第一行为字段名（表头），后续行为数据</p>
+        </div>
+
+        <div v-if="importResult" class="p-3 rounded-lg text-sm">
+          <p :class="importResult.failed > 0 ? 'text-amber-400' : 'text-emerald-400'">
+            {{ importResult.message }}
+          </p>
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <Button variant="secondary" @click="showImportModal = false">取消</Button>
+          <Button @click="doImport" :disabled="importLoading">
+            {{ importLoading ? '导入中...' : '导入' }}
+          </Button>
         </div>
       </template>
     </Modal>

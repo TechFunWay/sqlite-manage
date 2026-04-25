@@ -18,7 +18,7 @@ const emit = defineEmits(['close'])
 const tableName = ref('')
 const tableNameRef = ref(null)
 const columns = ref([
-  { name: '', type: 'INTEGER', nullable: false, primaryKey: true, defaultValue: null }
+  { name: '', type: 'INTEGER', comment: '', nullable: false, primaryKey: true, defaultValue: null }
 ])
 
 const sqlTypes = [
@@ -40,7 +40,7 @@ const sqlTypes = [
 watch(() => props.show, (newVal) => {
   if (newVal) {
     tableName.value = ''
-    columns.value = [{ name: '', type: 'INTEGER', nullable: false, primaryKey: true, defaultValue: null }]
+    columns.value = [{ name: '', type: 'INTEGER', comment: '', nullable: false, primaryKey: true, defaultValue: null }]
     nextTick(() => {
       tableNameRef.value?.focus()
     })
@@ -48,7 +48,7 @@ watch(() => props.show, (newVal) => {
 })
 
 function addColumn() {
-  columns.value.push({ name: '', type: 'TEXT', nullable: true, primaryKey: false, defaultValue: null })
+  columns.value.push({ name: '', type: 'TEXT', comment: '', nullable: true, primaryKey: false, defaultValue: null })
 }
 
 function removeColumn(index) {
@@ -109,6 +109,11 @@ async function createTable() {
               placeholder="字段名"
               class="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               autofocus
+            />
+            <input
+              v-model="column.comment"
+              placeholder="备注"
+              class="w-24 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
             <select
               v-model="column.type"

@@ -17,6 +17,7 @@ type Column struct {
 	Nullable     bool    `json:"nullable"`
 	DefaultValue *string `json:"defaultValue"`
 	PrimaryKey   bool    `json:"primaryKey"`
+	Comment      *string `json:"comment"`
 }
 
 type Index struct {
