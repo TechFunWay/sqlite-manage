@@ -16,9 +16,10 @@ frontend:
 
 build: backend frontend
 	rm -rf backend/public
-	mkdir -p backend/public/sqlite-web
+	mkdir -p backend/public/sqlite-web backend/public/img
 	cp frontend/dist/index.html backend/public/
 	cp -r frontend/dist/sqlite-web/* backend/public/sqlite-web/
+	cp -r frontend/public/img/* backend/public/img/ 2>/dev/null || true
 
 run: build
 	cd backend && ./sqlite-manager $(ARGS)
