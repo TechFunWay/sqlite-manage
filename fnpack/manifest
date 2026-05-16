@@ -1,5 +1,5 @@
 appname               = techfunway-sqlite-manage
-version               = 1.1.0
+version               = 1.2.0
 display_name          = SQLite管理工具
 desc                  = SQLite Web 数据库管理工具 - 支持数据库浏览、表结构查看、数据编辑等功能
 platform              = x86
@@ -11,6 +11,20 @@ distributor_url       = http://techfunway.wycto.cn
 desktop_uidir         = ui
 desktop_applaunchname = techfunway-sqlite-manage.Application
 changelog             = """
+v1.2.0 更新内容
+
+  1. 数据导入/导出
+    - 支持 JSON、CSV 格式导出表数据
+    - 支持导入数据到表中
+    - 支持下载数据库文件
+  2. 列注释支持
+    - 创建表时可为字段添加注释说明
+    - 表结构视图显示字段注释
+  3. 其他改进
+    - 数据表编辑页页面优化
+    - 支持分页查询
+
+v1.1.0 更新内容
 1. 新增：飞牛右键打开【.db、.db3、.sqlite、.sqlite3】数据库
 2. 新增：数据查询功能、sql语句执行功能
 3. 优化：输入框焦点定位、支持按回车确定
