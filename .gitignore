@@ -29,4 +29,5 @@ upload
 databases
 data
 backend/public
+.claude/
 .codebuddy/
