@@ -314,6 +314,18 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
+  async function updateColumn(oldName, column) {
+    try {
+      await tableApi.updateColumn(currentTable.value, oldName, column)
+      await selectTable(currentTable.value)
+      toast.success('字段修改成功')
+      return true
+    } catch (error) {
+      toast.error(error.response?.data?.error || '字段修改失败')
+      return false
+    }
+  }
+
   async function dropColumn(columnName) {
     try {
       await tableApi.dropColumn(currentTable.value, columnName)
@@ -455,6 +467,7 @@ export const useDatabaseStore = defineStore('database', () => {
     createTable,
     dropTable,
     addColumn,
+    updateColumn,
     dropColumn,
     createIndex,
     dropIndex,

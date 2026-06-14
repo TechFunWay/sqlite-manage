@@ -359,6 +359,7 @@ func startServer(shouldOpenBrowser bool) {
 		protectedAPI.DELETE("/tables/:name", handlers.DropTable)
 		protectedAPI.PUT("/tables/rename", handlers.RenameTable)
 		protectedAPI.POST("/tables/:name/columns", handlers.AddColumn)
+		protectedAPI.PUT("/tables/:name/columns/:column", handlers.UpdateColumn)
 		protectedAPI.DELETE("/tables/:name/columns/:column", handlers.DropColumn)
 
 		protectedAPI.GET("/tables/:name/indexes", handlers.GetIndexes)

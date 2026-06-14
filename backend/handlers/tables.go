@@ -144,6 +144,47 @@ func AddColumn(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Column added successfully"})
 }
 
+func UpdateColumn(c *gin.Context) {
+	tableName := c.Param("name")
+	oldName := c.Param("column")
+	var reqColumn models.Column
+
+	if err := c.ShouldBindJSON(&reqColumn); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	if !database.IsOpen() {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No database connected"})
+		return
+	}
+
+	column := database.Column{
+		Name:         reqColumn.Name,
+		Type:         reqColumn.Type,
+		Nullable:     reqColumn.Nullable,
+		DefaultValue: reqColumn.DefaultValue,
+		PrimaryKey:   reqColumn.PrimaryKey,
+	}
+
+	if err := database.UpdateColumn(tableName, oldName, column); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 同步备注：重命名时迁移旧记录，再写入新备注（为空则清除）
+	if reqColumn.Name != oldName {
+		database.RenameColumnComment(tableName, oldName, reqColumn.Name)
+	}
+	comment := ""
+	if reqColumn.Comment != nil {
+		comment = *reqColumn.Comment
+	}
+	database.SetColumnComment(tableName, reqColumn.Name, comment)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Column updated successfully"})
+}
+
 func DropColumn(c *gin.Context) {
 	tableName := c.Param("name")
 	columnName := c.Param("column")
