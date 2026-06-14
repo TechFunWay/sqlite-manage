@@ -3,7 +3,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { useDatabaseStore } from '../../stores/database'
 import { useToastStore } from '../../stores/toast'
 import { queryApi } from '../../api'
-import { Plus, Trash2, Edit3, Check, X, ChevronLeft, ChevronRight, Download, Upload, Search, XCircle, Terminal, Loader, FileText, Database } from 'lucide-vue-next'
+import { Plus, Trash2, Edit3, Check, X, ChevronLeft, ChevronRight, Download, Upload, Search, XCircle, Terminal, Loader, FileText, Database, Columns3 } from 'lucide-vue-next'
 import Button from '../common/Button.vue'
 import Modal from '../common/Modal.vue'
 import Input from '../common/Input.vue'
@@ -41,6 +41,39 @@ const sqlLoading = ref(false)
 
 // 查询条件 - 支持多个条件（使用store中的状态）
 const showQueryPanel = ref(false)
+
+// 列显示控制
+const showColumnPanel = ref(false)
+const columnVisible = ref({})
+
+// 切换表/结构时，默认显示全部列
+watch(() => store.currentSchema, (schema) => {
+  const map = {}
+  if (schema?.columns) {
+    schema.columns.forEach(c => { map[c.name] = true })
+  }
+  columnVisible.value = map
+}, { immediate: true })
+
+// 实际显示的列
+const displayColumns = computed(() => {
+  const cols = store.currentSchema?.columns || []
+  return cols.filter(c => columnVisible.value[c.name] !== false)
+})
+
+// 已显示的列数 / 总列数
+const visibleColumnCount = computed(() => displayColumns.value.length)
+const totalColumnCount = computed(() => store.currentSchema?.columns?.length || 0)
+
+function toggleColumn(name) {
+  columnVisible.value = { ...columnVisible.value, [name]: !columnVisible.value[name] }
+}
+
+function setAllColumns(visible) {
+  const map = {}
+  ;(store.currentSchema?.columns || []).forEach(c => { map[c.name] = visible })
+  columnVisible.value = map
+}
 
 const operators = [
   { value: '=', label: '等于 (=)' },
@@ -389,6 +422,42 @@ async function downloadDatabaseFile() {
             有条件
           </span>
         </Button>
+        <div class="relative">
+          <Button size="small" variant="secondary" @click="showColumnPanel = !showColumnPanel">
+            <Columns3 class="w-4 h-4" />
+            列
+            <span class="ml-1 px-1.5 py-0.5 bg-slate-700 text-slate-400 text-xs rounded">
+              {{ visibleColumnCount }}/{{ totalColumnCount }}
+            </span>
+          </Button>
+          <div v-if="showColumnPanel" class="absolute right-0 mt-1 w-56 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50">
+            <div class="flex items-center justify-between px-3 py-2 border-b border-slate-700">
+              <span class="text-xs text-slate-400">显示的列</span>
+              <div class="flex items-center gap-2">
+                <button @click="setAllColumns(true)" class="text-xs text-primary-400 hover:text-primary-300">全选</button>
+                <button @click="setAllColumns(false)" class="text-xs text-slate-400 hover:text-slate-300">全不选</button>
+              </div>
+            </div>
+            <div class="max-h-64 overflow-auto py-1">
+              <label
+                v-for="column in store.currentSchema?.columns"
+                :key="column.name"
+                class="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700/50 cursor-pointer"
+                :title="column.comment ? `${column.name} (${column.comment})` : column.name"
+              >
+                <input
+                  type="checkbox"
+                  :checked="columnVisible[column.name] !== false"
+                  @change="toggleColumn(column.name)"
+                  class="rounded border-slate-600 bg-slate-700 text-primary-500 focus:ring-primary-500 focus:ring-offset-0 shrink-0"
+                />
+                <span class="shrink-0">{{ column.name }}</span>
+                <span v-if="column.comment" class="text-xs text-slate-500 truncate">{{ column.comment }}</span>
+                <span v-if="column.primaryKey" class="px-1 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] rounded shrink-0 ml-auto">PK</span>
+              </label>
+            </div>
+          </div>
+        </div>
         <Button size="small" @click="showAddRow = true">
           <Plus class="w-4 h-4" />
           新增
@@ -509,7 +578,7 @@ async function downloadDatabaseFile() {
         <thead class="bg-slate-800 sticky top-0">
           <tr>
             <th
-              v-for="column in store.currentSchema?.columns"
+              v-for="column in displayColumns"
               :key="column.name"
               class="px-4 py-3 text-left font-medium text-slate-300 border-b border-slate-700 whitespace-nowrap"
             >
@@ -517,6 +586,13 @@ async function downloadDatabaseFile() {
                 <span>{{ column.name }}</span>
                 <span class="text-xs text-slate-500">{{ column.type }}</span>
                 <span v-if="column.primaryKey" class="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded">PK</span>
+                <span
+                  v-if="column.comment"
+                  class="text-xs text-slate-500 font-normal max-w-[160px] truncate"
+                  :title="column.comment"
+                >
+                  {{ column.comment }}
+                </span>
               </div>
             </th>
             <th class="px-4 py-3 w-20 border-b border-slate-700"></th>
@@ -529,7 +605,7 @@ async function downloadDatabaseFile() {
             class="group hover:bg-slate-800/50 transition-colors"
           >
             <td
-              v-for="column in store.currentSchema?.columns"
+              v-for="column in displayColumns"
               :key="column.name"
               class="px-4 py-2 border-b border-slate-700/50"
             >
@@ -568,7 +644,7 @@ async function downloadDatabaseFile() {
             </td>
           </tr>
           <tr v-if="store.currentData?.length === 0">
-            <td :colspan="(store.currentSchema?.columns?.length || 0) + 1" class="px-4 py-12 text-center text-slate-500">
+            <td :colspan="visibleColumnCount + 1" class="px-4 py-12 text-center text-slate-500">
               暂无数据
             </td>
           </tr>

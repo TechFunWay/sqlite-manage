@@ -81,6 +81,7 @@ export const tableApi = {
   drop: (name) => api.delete(`/tables/${name}`),
   rename: (oldName, newName) => api.put('/tables/rename', { oldName, newName }),
   addColumn: (tableName, column) => api.post(`/tables/${tableName}/columns`, column),
+  updateColumn: (tableName, columnName, column) => api.put(`/tables/${tableName}/columns/${columnName}`, column),
   dropColumn: (tableName, columnName) => api.delete(`/tables/${tableName}/columns/${columnName}`),
   getIndexes: (name) => api.get(`/tables/${name}/indexes`),
   createIndex: (tableName, data) => api.post(`/tables/${tableName}/indexes`, data),

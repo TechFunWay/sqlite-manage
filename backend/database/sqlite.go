@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -732,6 +733,227 @@ func GetColumnsForDrop(tableName string) ([]Column, error) {
 		columns = append(columns, col)
 	}
 	return columns, nil
+}
+
+// defaultValueEqual 比较两个默认值是否相等（含 nil 处理）
+func defaultValueEqual(a, b *string) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
+// UpdateColumn 修改字段信息：名称、类型、是否可空、默认值。
+// 仅重命名时使用 RENAME COLUMN（保留数据与索引）；
+// 涉及类型/约束变化时重建表，并保留数据和用户创建的索引。
+// 主键属性保持原值不变（不支持在此处修改主键）。
+func UpdateColumn(tableName, oldName string, newCol Column) error {
+	db := getDB()
+	if db == nil {
+		return fmt.Errorf("no database connected")
+	}
+
+	columns, err := GetColumnsForDrop(tableName)
+	if err != nil {
+		return err
+	}
+
+	var oldCol *Column
+	for i := range columns {
+		if columns[i].Name == oldName {
+			oldCol = &columns[i]
+			break
+		}
+	}
+	if oldCol == nil {
+		return fmt.Errorf("字段 '%s' 不存在", oldName)
+	}
+
+	if newCol.Name == "" {
+		return fmt.Errorf("字段名不能为空")
+	}
+	// 重命名时检查新名是否与其他字段冲突
+	if newCol.Name != oldName {
+		for _, col := range columns {
+			if col.Name == newCol.Name {
+				return fmt.Errorf("字段名 '%s' 已存在", newCol.Name)
+			}
+		}
+	}
+
+	// 主键属性保持不变
+	newCol.PrimaryKey = oldCol.PrimaryKey
+
+	nameChanged := newCol.Name != oldName
+	structuralChanged := !strings.EqualFold(newCol.Type, oldCol.Type) ||
+		newCol.Nullable != oldCol.Nullable ||
+		!defaultValueEqual(oldCol.DefaultValue, newCol.DefaultValue)
+
+	// 仅重命名（无结构变化）：使用 RENAME COLUMN，自动保留数据与索引
+	if !structuralChanged {
+		if nameChanged {
+			q := fmt.Sprintf("ALTER TABLE \"%s\" RENAME COLUMN \"%s\" TO \"%s\"", tableName, oldName, newCol.Name)
+			if _, err := db.Exec(q); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// 结构变化：重建表。先捕获用户创建的索引（origin = 'c'）
+	type idxDef struct {
+		name    string
+		unique  bool
+		columns []string
+	}
+	var userIndexes []idxDef
+	ilRows, err := db.Query(fmt.Sprintf("PRAGMA index_list(\"%s\")", tableName))
+	if err == nil {
+		type rawIdx struct {
+			name   string
+			unique bool
+			origin string
+		}
+		var raws []rawIdx
+		for ilRows.Next() {
+			var seq, unique int
+			var name, origin, partial string
+			ilRows.Scan(&seq, &name, &unique, &origin, &partial)
+			raws = append(raws, rawIdx{name, unique == 1, origin})
+		}
+		ilRows.Close()
+		for _, ri := range raws {
+			if ri.origin != "c" {
+				continue // 跳过主键/唯一约束自动生成的索引
+			}
+			var cols []string
+			iiRows, e := db.Query(fmt.Sprintf("PRAGMA index_info(\"%s\")", ri.name))
+			if e == nil {
+				for iiRows.Next() {
+					var seqno, cid int
+					var colName string
+					iiRows.Scan(&seqno, &cid, &colName)
+					cols = append(cols, colName)
+				}
+				iiRows.Close()
+			}
+			userIndexes = append(userIndexes, idxDef{ri.name, ri.unique, cols})
+		}
+	}
+
+	// 构建新列集合（替换目标列）
+	newColumns := make([]Column, len(columns))
+	for i, col := range columns {
+		if col.Name == oldName {
+			newColumns[i] = newCol
+		} else {
+			newColumns[i] = col
+		}
+	}
+
+	tempTable := tableName + "_temp_update"
+	_, _ = db.Exec(fmt.Sprintf("DROP TABLE IF EXISTS \"%s\"", tempTable))
+
+	// 原列名（用于从备份表按位置回填）
+	oldColNames := make([]string, 0, len(columns))
+	for _, col := range columns {
+		oldColNames = append(oldColNames, fmt.Sprintf("\"%s\"", col.Name))
+	}
+	newColNames := make([]string, 0, len(newColumns))
+	for _, col := range newColumns {
+		newColNames = append(newColNames, fmt.Sprintf("\"%s\"", col.Name))
+	}
+
+	// 1. 备份原表
+	if _, err := db.Exec(fmt.Sprintf("CREATE TABLE \"%s\" AS SELECT * FROM \"%s\"", tempTable, tableName)); err != nil {
+		return err
+	}
+	// 2. 删除原表
+	if _, err := db.Exec(fmt.Sprintf("DROP TABLE \"%s\"", tableName)); err != nil {
+		return err
+	}
+	// 3. 以新结构重建
+	colDefs := make([]string, 0, len(newColumns))
+	for _, col := range newColumns {
+		colDef := fmt.Sprintf("\"%s\" %s", col.Name, col.Type)
+		if col.PrimaryKey {
+			colDef += " PRIMARY KEY"
+		} else if !col.Nullable {
+			colDef += " NOT NULL"
+		}
+		if col.DefaultValue != nil {
+			colDef += fmt.Sprintf(" DEFAULT %s", *col.DefaultValue)
+		}
+		colDefs = append(colDefs, colDef)
+	}
+	if _, err := db.Exec(fmt.Sprintf("CREATE TABLE \"%s\" (%s)", tableName, joinStrings(colDefs, ", "))); err != nil {
+		return err
+	}
+	// 4. 回填数据（原列按位置映射到新列）
+	if _, err := db.Exec(fmt.Sprintf("INSERT INTO \"%s\" (%s) SELECT %s FROM \"%s\"",
+		tableName, joinStrings(newColNames, ", "), joinStrings(oldColNames, ", "), tempTable)); err != nil {
+		return err
+	}
+	// 5. 清理临时表
+	if _, err := db.Exec(fmt.Sprintf("DROP TABLE \"%s\"", tempTable)); err != nil {
+		return err
+	}
+	// 6. 重建用户索引（重命名列时同步替换列名）
+	for _, idx := range userIndexes {
+		cols := make([]string, len(idx.columns))
+		for i, c := range idx.columns {
+			if c == oldName {
+				cols[i] = newCol.Name
+			} else {
+				cols[i] = c
+			}
+		}
+		_ = CreateIndex(tableName, idx.name, cols, idx.unique)
+	}
+
+	return nil
+}
+
+// SetColumnComment 设置或清除单个字段的备注。
+func SetColumnComment(tableName, columnName, comment string) error {
+	db := getDB()
+	if db == nil {
+		return fmt.Errorf("no database connected")
+	}
+
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS "_column_comments" (
+		table_name TEXT NOT NULL,
+		column_name TEXT NOT NULL,
+		comment TEXT,
+		PRIMARY KEY (table_name, column_name)
+	)`); err != nil {
+		return err
+	}
+
+	if comment == "" {
+		_, err := db.Exec(`DELETE FROM "_column_comments" WHERE table_name = ? AND column_name = ?`, tableName, columnName)
+		return err
+	}
+	_, err := db.Exec(`INSERT OR REPLACE INTO "_column_comments" (table_name, column_name, comment) VALUES (?, ?, ?)`,
+		tableName, columnName, comment)
+	return err
+}
+
+// RenameColumnComment 在字段重命名后迁移其备注记录。
+func RenameColumnComment(tableName, oldColumn, newColumn string) error {
+	db := getDB()
+	if db == nil {
+		return fmt.Errorf("no database connected")
+	}
+	if oldColumn == newColumn {
+		return nil
+	}
+	_, err := db.Exec(`UPDATE "_column_comments" SET column_name = ? WHERE table_name = ? AND column_name = ?`,
+		newColumn, tableName, oldColumn)
+	return err
 }
 
 func SaveColumnComments(tableName string, columns []Column) error {

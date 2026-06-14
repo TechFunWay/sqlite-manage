@@ -1,7 +1,7 @@
 <script setup>
 import { ref, nextTick } from 'vue'
 import { useDatabaseStore } from '../../stores/database'
-import { Plus, Trash2, Key, Hash, Type, ToggleLeft, List, Calendar, Check } from 'lucide-vue-next'
+import { Plus, Trash2, Key, Hash, Type, ToggleLeft, List, Calendar, Check, Edit3 } from 'lucide-vue-next'
 import Button from '../common/Button.vue'
 import Modal from '../common/Modal.vue'
 import Input from '../common/Input.vue'
@@ -24,6 +24,19 @@ const newColumn = ref({
   defaultValue: null
 })
 const columnNameRef = ref(null)
+
+// 编辑字段
+const showEditColumn = ref(false)
+const editingOldName = ref('')
+const editingPrimaryKey = ref(false)
+const editColumn = ref({
+  name: '',
+  type: 'TEXT',
+  nullable: true,
+  defaultValue: null,
+  comment: ''
+})
+const editColumnNameRef = ref(null)
 
 const newIndex = ref({
   name: '',
@@ -78,6 +91,38 @@ async function addColumn() {
   const success = await store.addColumn(newColumn.value)
   if (success) {
     showAddColumn.value = false
+  }
+}
+
+function openEditColumn(column) {
+  editingOldName.value = column.name
+  editingPrimaryKey.value = column.primaryKey
+  editColumn.value = {
+    name: column.name,
+    type: column.type,
+    nullable: column.nullable,
+    defaultValue: column.defaultValue ?? null,
+    comment: column.comment || ''
+  }
+  showEditColumn.value = true
+  nextTick(() => {
+    editColumnNameRef.value?.focus()
+  })
+}
+
+async function saveEditColumn() {
+  if (!editColumn.value.name || !editColumn.value.type) return
+  const payload = {
+    name: editColumn.value.name,
+    type: editColumn.value.type,
+    nullable: editColumn.value.nullable,
+    primaryKey: editingPrimaryKey.value,
+    defaultValue: editColumn.value.defaultValue === '' ? null : editColumn.value.defaultValue,
+    comment: editColumn.value.comment || null
+  }
+  const success = await store.updateColumn(editingOldName.value, payload)
+  if (success) {
+    showEditColumn.value = false
   }
 }
 
@@ -140,7 +185,8 @@ async function deleteItem() {
             <th class="px-4 py-3 text-left font-medium text-slate-300">可空</th>
             <th class="px-4 py-3 text-left font-medium text-slate-300">默认值</th>
             <th class="px-4 py-3 text-left font-medium text-slate-300">键</th>
-            <th class="px-4 py-3 w-16"></th>
+            <th class="px-4 py-3 text-left font-medium text-slate-300">备注</th>
+            <th class="px-4 py-3 w-24"></th>
           </tr>
         </thead>
         <tbody>
@@ -170,13 +216,27 @@ async function deleteItem() {
               </span>
               <span v-else class="text-slate-600">-</span>
             </td>
+            <td class="px-4 py-3 text-slate-400 max-w-[220px]">
+              <span v-if="column.comment" class="block truncate" :title="column.comment">{{ column.comment }}</span>
+              <span v-else class="text-slate-600">-</span>
+            </td>
             <td class="px-4 py-3">
-              <button
-                @click="confirmDelete('column', column.name)"
-                class="p-1 text-red-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 rounded transition-all"
-              >
-                <Trash2 class="w-4 h-4" />
-              </button>
+              <div class="flex items-center gap-1">
+                <button
+                  @click="openEditColumn(column)"
+                  class="p-1 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-primary-400 hover:bg-primary-500/10 rounded transition-all"
+                  title="修改字段"
+                >
+                  <Edit3 class="w-4 h-4" />
+                </button>
+                <button
+                  @click="confirmDelete('column', column.name)"
+                  class="p-1 text-red-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 rounded transition-all"
+                  title="删除字段"
+                >
+                  <Trash2 class="w-4 h-4" />
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -266,6 +326,58 @@ async function deleteItem() {
         <div class="flex justify-end gap-3">
           <Button variant="secondary" @click="showAddColumn = false">取消</Button>
           <Button @click="addColumn" :disabled="!newColumn.name || !newColumn.type">添加</Button>
+        </div>
+      </template>
+    </Modal>
+
+    <Modal :show="showEditColumn" title="修改字段" @close="showEditColumn = false">
+      <div class="space-y-4">
+        <Input
+          ref="editColumnNameRef"
+          v-model="editColumn.name"
+          label="字段名"
+          placeholder="请输入字段名"
+          required
+          @keyup.enter="saveEditColumn"
+        />
+        <Input
+          v-model="editColumn.type"
+          label="数据类型"
+          placeholder="如 TEXT、INTEGER、VARCHAR(255)"
+          required
+        />
+        <Input
+          v-model="editColumn.comment"
+          label="备注 (可选)"
+          placeholder="字段说明"
+        />
+        <div class="flex items-center gap-4">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              v-model="editColumn.nullable"
+              :disabled="editingPrimaryKey"
+              class="w-4 h-4 rounded border-slate-600 bg-slate-700 text-primary-500 focus:ring-primary-500 disabled:opacity-50"
+            />
+            <span class="text-sm text-slate-300">允许为空</span>
+          </label>
+          <span v-if="editingPrimaryKey" class="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded font-medium">
+            主键（不可修改）
+          </span>
+        </div>
+        <Input
+          v-model="editColumn.defaultValue"
+          label="默认值 (可选)"
+          placeholder="留空表示无默认值"
+        />
+        <p class="text-xs text-slate-500">
+          提示：修改类型/可空/默认值会重建表（数据与索引会保留）；仅改名或备注则不会重建。
+        </p>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <Button variant="secondary" @click="showEditColumn = false">取消</Button>
+          <Button @click="saveEditColumn" :disabled="!editColumn.name || !editColumn.type">保存</Button>
         </div>
       </template>
     </Modal>
