@@ -23,6 +23,7 @@ const store = useDatabaseStore()
 const toast = useToastStore()
 
 const sidebarRef = ref(null)
+const sidebarOpen = ref(false)
 const activeTab = ref('data')
 const showCreateTable = ref(false)
 const fileInput = ref(null)
@@ -211,13 +212,15 @@ function formatSharePath(path) {
 
 <template>
   <div class="h-screen flex flex-col bg-slate-900">
-    <AppHeader />
-    
+    <AppHeader @toggle-sidebar="sidebarOpen = !sidebarOpen" />
+
     <div class="flex-1 flex overflow-hidden">
-      <!-- Sidebar - always show -->
-      <AppSidebar 
+      <!-- Sidebar - 桌面端常驻，移动端抽屉 -->
+      <AppSidebar
         ref="sidebarRef"
-        @create-table="showCreateTable = true" 
+        :open="sidebarOpen"
+        @close="sidebarOpen = false"
+        @create-table="showCreateTable = true"
         @select-database="openBrowseModal"
         @create-database="openCreateModal"
       />

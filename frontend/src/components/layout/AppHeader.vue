@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useDatabaseStore } from '../../stores/database'
 import { useAuthStore } from '../../stores/auth'
 import { systemApi } from '../../api'
-import { Database, LogOut, Plus, ChevronDown, X, Key, User, Info, Heart } from 'lucide-vue-next'
+import { Database, LogOut, Plus, ChevronDown, X, Key, User, Info, Heart, Menu } from 'lucide-vue-next'
 import Button from '../common/Button.vue'
 import Modal from '../common/Modal.vue'
 import Input from '../common/Input.vue'
@@ -12,6 +12,8 @@ import Input from '../common/Input.vue'
 const router = useRouter()
 const store = useDatabaseStore()
 const authStore = useAuthStore()
+
+const emit = defineEmits(['toggle-sidebar'])
 
 const showDropdown = ref(false)
 const showUserMenu = ref(false)
@@ -88,25 +90,34 @@ async function handleLogout() {
 </script>
 
 <template>
-  <header class="h-14 bg-slate-800/80 backdrop-blur-xl border-b border-slate-700 flex items-center justify-between px-4 relative z-40">
-    <div class="flex items-center gap-4">
-      <div class="flex items-center gap-2">
+  <header class="h-14 bg-slate-800/80 backdrop-blur-xl border-b border-slate-700 flex items-center justify-between px-3 sm:px-4 relative z-40">
+    <div class="flex items-center gap-2 sm:gap-4 min-w-0">
+      <!-- 移动端菜单按钮 -->
+      <button
+        @click="emit('toggle-sidebar')"
+        class="p-2 -ml-1 rounded-lg text-slate-300 hover:text-slate-100 hover:bg-slate-700 transition-colors lg:hidden flex-shrink-0"
+        title="菜单"
+      >
+        <Menu class="w-5 h-5" />
+      </button>
+
+      <div class="flex items-center gap-2 flex-shrink-0">
         <div class="w-8 h-8 bg-primary-500/10 rounded-lg flex items-center justify-center">
           <Database class="w-4 h-4 text-primary-400" />
         </div>
-        <div class="flex flex-col">
+        <div class="hidden sm:flex flex-col">
           <span class="font-semibold text-slate-100 text-sm">SQLite Manager</span>
           <span v-if="appVersion" class="text-xs text-slate-500">v{{ appVersion }}</span>
         </div>
       </div>
-      
-      <div class="relative database-dropdown">
+
+      <div class="relative database-dropdown min-w-0">
         <button
           @click="toggleDropdown"
-          class="flex items-center gap-2 px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-sm transition-colors max-w-xs sm:max-w-md"
+          class="flex items-center gap-2 px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-sm transition-colors max-w-[45vw] sm:max-w-md"
         >
           <div v-if="store.databaseInfo" class="w-2 h-2 bg-emerald-400 rounded-full flex-shrink-0"></div>
-          <span class="text-slate-300 truncate" style="max-width: 250px;" :title="store.databaseInfo?.path">
+          <span class="text-slate-300 truncate max-w-[120px] sm:max-w-[250px]" :title="store.databaseInfo?.path">
             {{ store.databaseInfo?.name || '选择数据库' }}
           </span>
           <ChevronDown class="w-4 h-4 text-slate-400 flex-shrink-0" />
@@ -146,7 +157,7 @@ async function handleLogout() {
                   </span>
                   <button
                     @click="closeDb(db, $event)"
-                    class="p-1 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"
+                    class="p-1 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"
                     title="关闭数据库"
                   >
                     <X class="w-3.5 h-3.5" />

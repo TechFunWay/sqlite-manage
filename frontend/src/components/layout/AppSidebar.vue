@@ -10,7 +10,14 @@ import {
 import Button from '../common/Button.vue'
 import ConfirmDialog from '../common/ConfirmDialog.vue'
 
-const emit = defineEmits(['create-table', 'select-database', 'create-database'])
+const emit = defineEmits(['create-table', 'select-database', 'create-database', 'close'])
+
+defineProps({
+  open: {
+    type: Boolean,
+    default: false
+  }
+})
 
 const store = useDatabaseStore()
 const toast = useToastStore()
@@ -120,6 +127,8 @@ function selectTable(table, db) {
   } else {
     store.selectTable(table.name)
   }
+  // 移动端选择表后自动收起侧边栏
+  emit('close')
 }
 
 async function openRecentDatabase(record) {
@@ -160,11 +169,18 @@ function formatPath(path) {
 function handleOpenDatabase() {
   showMenu.value = false
   emit('select-database')
+  emit('close')
 }
 
 function handleCreateDatabase() {
   showMenu.value = false
   emit('create-database')
+  emit('close')
+}
+
+function handleCreateTable() {
+  emit('create-table')
+  emit('close')
 }
 
 // Expose addToRecent for parent component
@@ -172,7 +188,23 @@ defineExpose({ addToRecent, loadRecentDatabases })
 </script>
 
 <template>
-  <aside class="w-72 bg-slate-800/50 border-r border-slate-700 flex flex-col overflow-hidden">
+  <!-- 移动端遮罩层 -->
+  <Transition name="fade">
+    <div
+      v-if="open"
+      @click="emit('close')"
+      class="fixed inset-x-0 bottom-0 top-14 bg-black/60 backdrop-blur-sm z-30 lg:hidden"
+    />
+  </Transition>
+
+  <aside
+    :class="[
+      'bg-slate-800/50 border-r border-slate-700 flex flex-col overflow-hidden',
+      'fixed top-14 bottom-0 left-0 z-40 w-72 max-w-[85vw] transition-transform duration-300 ease-out',
+      'lg:static lg:top-0 lg:z-auto lg:max-w-none lg:translate-x-0 lg:transition-none',
+      open ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+    ]"
+  >
     <div class="p-3 border-b border-slate-700">
       <div class="relative">
         <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -221,7 +253,7 @@ defineExpose({ addToRecent, loadRecentDatabases })
               <button
                 v-if="!loadingDb || loadingDb !== db.id"
                 @click.stop="closeDatabase(db, $event)"
-                class="p-1 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"
+                class="p-1 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"
                 title="关闭"
               >
                 <X class="w-3 h-3" />
@@ -249,7 +281,7 @@ defineExpose({ addToRecent, loadRecentDatabases })
                 <button
                   v-if="db.active"
                   @click.stop="handleDropTable(table)"
-                  class="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400 transition-all"
+                  class="p-1 rounded opacity-100 lg:opacity-0 lg:group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400 transition-all"
                   title="删除表"
                 >
                   <Trash2 class="w-3 h-3" />
@@ -328,7 +360,7 @@ defineExpose({ addToRecent, loadRecentDatabases })
         </Transition>
       </div>
       
-      <Button @click="emit('create-table')" size="small" fullWidth :disabled="!store.databaseInfo">
+      <Button @click="handleCreateTable" size="small" fullWidth :disabled="!store.databaseInfo">
         <Plus class="w-4 h-4" />
         新建表
       </Button>
