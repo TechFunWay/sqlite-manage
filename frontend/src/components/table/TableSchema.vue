@@ -176,8 +176,8 @@ async function deleteItem() {
       </Button>
     </div>
 
-    <div class="bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden">
-      <table class="w-full text-sm">
+    <div class="bg-slate-800/50 rounded-lg border border-slate-700 overflow-x-auto">
+      <table class="w-full text-sm min-w-[640px]">
         <thead class="bg-slate-800">
           <tr>
             <th class="px-4 py-3 text-left font-medium text-slate-300">字段名</th>
@@ -224,14 +224,14 @@ async function deleteItem() {
               <div class="flex items-center gap-1">
                 <button
                   @click="openEditColumn(column)"
-                  class="p-1 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-primary-400 hover:bg-primary-500/10 rounded transition-all"
+                  class="p-1 text-slate-400 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 hover:text-primary-400 hover:bg-primary-500/10 rounded transition-all"
                   title="修改字段"
                 >
                   <Edit3 class="w-4 h-4" />
                 </button>
                 <button
                   @click="confirmDelete('column', column.name)"
-                  class="p-1 text-red-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 rounded transition-all"
+                  class="p-1 text-red-400 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 hover:bg-red-500/20 rounded transition-all"
                   title="删除字段"
                 >
                   <Trash2 class="w-4 h-4" />
@@ -270,7 +270,7 @@ async function deleteItem() {
           </div>
           <button
             @click="confirmDelete('index', index.name)"
-            class="p-1 text-red-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 rounded transition-all"
+            class="p-1 text-red-400 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 hover:bg-red-500/20 rounded transition-all"
           >
             <Trash2 class="w-4 h-4" />
           </button>

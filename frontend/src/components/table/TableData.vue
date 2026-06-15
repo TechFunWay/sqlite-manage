@@ -409,12 +409,12 @@ async function downloadDatabaseFile() {
 
 <template>
   <div class="h-full flex flex-col">
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h2 class="text-lg font-semibold text-slate-100">{{ store.currentTable }}</h2>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+      <div class="flex-shrink-0">
+        <h2 class="text-lg font-semibold text-slate-100 truncate">{{ store.currentTable }}</h2>
         <p class="text-sm text-slate-500">共 {{ store.totalRows }} 行</p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <Button size="small" variant="secondary" @click="toggleQueryPanel">
           <Search class="w-4 h-4" />
           查询
@@ -484,7 +484,7 @@ async function downloadDatabaseFile() {
         </div>
         <Button size="small" variant="secondary" @click="downloadDatabaseFile">
           <Database class="w-4 h-4" />
-          下载数据库
+          <span class="hidden sm:inline">下载数据库</span>
         </Button>
         <Button size="small" variant="secondary" @click="toggleSqlPanel">
           <Terminal class="w-4 h-4" />
@@ -627,9 +627,10 @@ async function downloadDatabaseFile() {
                 v-else
                 @dblclick="startEdit(row, column.name)"
                 :class="[
-                  'cursor-pointer px-2 py-1 -mx-2 rounded hover:bg-slate-700/50',
+                  'cursor-pointer px-2 py-1 -mx-2 rounded hover:bg-slate-700/50 touch-manipulation max-w-[60vw] sm:max-w-none truncate',
                   row[column.name] === null ? 'text-slate-500 italic' : 'text-slate-300'
                 ]"
+                :title="row[column.name] === null ? 'NULL' : String(row[column.name])"
               >
                 {{ row[column.name] === null ? 'NULL' : row[column.name] }}
               </div>
@@ -637,7 +638,7 @@ async function downloadDatabaseFile() {
             <td class="px-4 py-2 border-b border-slate-700/50">
               <button
                 @click="confirmDelete(row)"
-                class="p-1 text-red-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 rounded transition-all"
+                class="p-1 text-red-400 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 hover:bg-red-500/20 rounded transition-all"
               >
                 <Trash2 class="w-4 h-4" />
               </button>
