@@ -28,3 +28,4 @@ upload
 databases
 data
 backend/public
+backend/sqlite-manager
