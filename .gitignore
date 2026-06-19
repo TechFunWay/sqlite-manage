@@ -29,3 +29,6 @@ databases
 data
 backend/public
 backend/sqlite-manager
+
+# 测试/临时文件
+browse-modal*.png
