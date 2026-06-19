@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDatabaseStore } from '../stores/database'
 import { useToastStore } from '../stores/toast'
@@ -26,7 +26,12 @@ const newDbInputRef = ref(null)
 const currentPath = ref('')
 const parentPath = ref('')
 const fileList = ref([])
+const shareDirs = ref([])
 const browsingLoading = ref(false)
+// 前进/后退历史
+const history = ref([])
+const historyIndex = ref(-1)
+const canGoBack = computed(() => historyIndex.value > 0)
 
 const isDragging = ref(false)
 const recentDatabases = ref(JSON.parse(localStorage.getItem('recentDatabases') || '[]'))
@@ -61,17 +66,26 @@ function addToRecent(path) {
 
 // File browser functions
 async function openBrowseModal() {
+  history.value = []
+  historyIndex.value = -1
   showBrowseModal.value = true
   await browseDirectory('')
 }
 
-async function browseDirectory(path) {
+async function browseDirectory(path, pushHistory = true) {
   browsingLoading.value = true
   try {
     const response = await fileApi.browse(path)
     currentPath.value = response.data.currentPath
     parentPath.value = response.data.parent
     fileList.value = response.data.files || []
+    shareDirs.value = response.data.shareDirs || []
+    if (pushHistory) {
+      // 清掉前进历史，再追加
+      history.value = history.value.slice(0, historyIndex.value + 1)
+      history.value.push(response.data.currentPath)
+      historyIndex.value = history.value.length - 1
+    }
   } catch (error) {
     toast.error(error.response?.data?.error || '无法访问目录')
   } finally {
@@ -92,10 +106,26 @@ async function handleItemClick(file) {
   }
 }
 
-async function goToParent() {
-  if (parentPath.value) {
-    await browseDirectory(parentPath.value)
+function activeSharePath() {
+  const cur = currentPath.value || ''
+  for (const share of shareDirs.value) {
+    if (cur === share.path || cur.startsWith(share.path.replace(/\/?$/, '/'))) {
+      return share.path
+    }
   }
+  return shareDirs.value[0]?.path || ''
+}
+
+async function switchShareDir(path) {
+  history.value = []
+  historyIndex.value = -1
+  await browseDirectory(path)
+}
+
+async function goBack() {
+  if (!canGoBack.value) return
+  historyIndex.value--
+  await browseDirectory(history.value[historyIndex.value], false)
 }
 
 // Upload functions
@@ -308,25 +338,39 @@ function formatSize(bytes) {
     <!-- File Browser Modal -->
     <Modal :show="showBrowseModal" title="选择数据库文件" size="large" @close="showBrowseModal = false">
       <div class="space-y-4">
-        <!-- Current Path -->
-        <div class="flex items-center gap-2 p-3 bg-slate-700/30 rounded-lg">
-          <Folder class="w-4 h-4 text-slate-500 flex-shrink-0" />
-          <span class="text-sm text-slate-300 truncate font-mono" :title="currentPath">
-            {{ currentPath }}
-          </span>
+        <!-- 第一行：根目录选择 -->
+        <div v-if="shareDirs.length > 0" class="flex items-center gap-2">
+          <div class="w-8 h-8 flex items-center justify-center flex-shrink-0">
+            <FolderOpen class="w-4 h-4 text-slate-400" />
+          </div>
+          <select
+            :value="activeSharePath()"
+            @change="switchShareDir($event.target.value)"
+            class="flex-1 min-w-0 px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 cursor-pointer"
+          >
+            <option v-for="share in shareDirs" :key="share.path" :value="share.path">
+              {{ share.name }}（{{ share.path }}）
+            </option>
+          </select>
         </div>
 
-        <!-- Navigation -->
-        <div class="flex gap-2">
-          <Button 
-            size="small" 
-            variant="secondary" 
-            @click="goToParent" 
-            :disabled="!parentPath || browsingLoading"
+        <!-- 第二行：上一级 + 当前路径 -->
+        <div class="flex items-center gap-2">
+          <button
+            @click="goBack"
+            :disabled="!canGoBack || browsingLoading"
+            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors flex-shrink-0"
+            :class="canGoBack && !browsingLoading ? 'text-slate-300 hover:bg-slate-700/50' : 'text-slate-600 cursor-not-allowed'"
+            title="上一级"
           >
             <ChevronLeft class="w-4 h-4" />
-            上一级
-          </Button>
+          </button>
+          <div class="flex-1 min-w-0 flex items-center gap-2 px-3 py-2 bg-slate-700/30 border border-slate-700 rounded-lg">
+            <Folder class="w-4 h-4 text-slate-500 flex-shrink-0" />
+            <span class="text-sm text-slate-300 truncate font-mono" :title="currentPath">
+              {{ currentPath }}
+            </span>
+          </div>
         </div>
 
         <!-- File List -->
