@@ -31,3 +31,4 @@ data
 backend/public
 .claude/
 .codebuddy/
+backend/sqlite-manager
