@@ -32,3 +32,7 @@ backend/public
 .claude/
 .codebuddy/
 backend/sqlite-manager
+
+# 测试/临时文件
+.playwright-mcp/
+browse-modal*.png
