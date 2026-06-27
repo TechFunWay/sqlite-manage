@@ -12,7 +12,7 @@ import (
 )
 
 // Version 当前程序版本号
-const Version = "1.3.1"
+const Version = "1.4.0"
 
 var systemDB *sql.DB
 
