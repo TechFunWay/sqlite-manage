@@ -1,4 +1,4 @@
-.PHONY: all install backend frontend run dev build clean release fnpack docker help
+.PHONY: all install backend frontend run dev test build clean release fnpack docker help
 
 all: install build
 
@@ -23,6 +23,28 @@ build: backend frontend
 
 run: build
 	cd backend && ./sqlite-manager $(ARGS)
+
+TEST_DIR ?= test
+TEST_PORT ?= 8903
+
+# 生产预览：在根目录的 test/ 中复刻线上打包结构（二进制 + public 前端 + 运行时 data），
+# 单进程启动，和线上一致。启动前自动停止占用端口的旧进程。test/ 已加入 .gitignore。
+test: backend frontend
+	@echo "============================================"
+	@echo "  生产预览（单进程，和线上一致）"
+	@echo "============================================"
+	@echo "🛑 停止占用端口 $(TEST_PORT) 的进程..."
+	@-lsof -ti tcp:$(TEST_PORT) | xargs kill 2>/dev/null || true
+	@echo "📦 组装 $(TEST_DIR)/ 目录（同线上打包结构）..."
+	rm -rf $(TEST_DIR)
+	mkdir -p $(TEST_DIR)/public/sqlite-web $(TEST_DIR)/public/img
+	cp backend/sqlite-manager $(TEST_DIR)/
+	cp frontend/dist/index.html $(TEST_DIR)/public/
+	cp -r frontend/dist/sqlite-web/* $(TEST_DIR)/public/sqlite-web/
+	cp -r frontend/public/img/* $(TEST_DIR)/public/img/ 2>/dev/null || true
+	@echo "🚀 启动: http://localhost:$(TEST_PORT)  (数据目录: $(TEST_DIR)/data)"
+	@echo "============================================"
+	cd $(TEST_DIR) && ./sqlite-manager -no-browser -port $(TEST_PORT) $(ARGS)
 
 dev: backend
 	@echo "============================================"
@@ -56,7 +78,8 @@ help:
 	@echo "用法:"
 	@echo "  make build        构建项目 (本地运行)"
 	@echo "  make run          运行应用"
-	@echo "  make dev          开发模式"
+	@echo "  make dev          开发模式 (前后端双进程, 前端热更新)"
+	@echo "  make test         生产预览 (在 test/ 复刻线上结构, 单进程启动, 自动停占用端口)"
 	@echo ""
 	@echo "  make release      一键打包所有 (平台+飞牛+Docker)"
 	@echo "  make platforms    只打包各平台"
