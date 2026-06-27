@@ -2,6 +2,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useDatabaseStore } from '../../stores/database'
 import { useToastStore } from '../../stores/toast'
+import { useCellCopy } from '../../composables/useCellCopy'
 import { queryApi } from '../../api'
 import { Plus, Trash2, Edit3, Check, X, ChevronLeft, ChevronRight, Download, Upload, Search, XCircle, Terminal, Loader, FileText, Database, Columns3 } from 'lucide-vue-next'
 import Button from '../common/Button.vue'
@@ -12,6 +13,7 @@ import ConfirmDialog from '../common/ConfirmDialog.vue'
 
 const store = useDatabaseStore()
 const toast = useToastStore()
+const { getCellHandlers } = useCellCopy()
 
 const editingCell = ref(null)
 const editValue = ref('')
@@ -626,8 +628,9 @@ async function downloadDatabaseFile() {
               <div
                 v-else
                 @dblclick="startEdit(row, column.name)"
+                v-on="getCellHandlers(row[column.name])"
                 :class="[
-                  'cursor-pointer px-2 py-1 -mx-2 rounded hover:bg-slate-700/50 touch-manipulation max-w-[60vw] sm:max-w-none truncate',
+                  'cursor-pointer select-none px-2 py-1 -mx-2 rounded hover:bg-slate-700/50 touch-manipulation max-w-[60vw] sm:max-w-none truncate',
                   row[column.name] === null ? 'text-slate-500 italic' : 'text-slate-300'
                 ]"
                 :title="row[column.name] === null ? 'NULL' : String(row[column.name])"
@@ -839,7 +842,14 @@ async function downloadDatabaseFile() {
                         :key="col"
                         class="px-4 py-2 border-b border-slate-700/50 max-w-xs truncate"
                       >
-                        <span :class="row[col] === null ? 'text-slate-500 italic' : 'text-slate-300'">
+                        <span
+                          v-on="getCellHandlers(row[col])"
+                          :class="[
+                            'cursor-pointer select-none touch-manipulation',
+                            row[col] === null ? 'text-slate-500 italic' : 'text-slate-300'
+                          ]"
+                          :title="row[col] === null ? 'NULL' : String(row[col])"
+                        >
                           {{ row[col] === null ? 'NULL' : row[col] }}
                         </span>
                       </td>
