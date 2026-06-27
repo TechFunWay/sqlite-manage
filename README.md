@@ -217,6 +217,10 @@ SQLite 数据库 (本地文件)
 - [云托管控制台](https://tcb.cloud.tencent.com/dev#/platform-run/service/detail?id=sqlite-manager-backend&NameSpace=code-buddy-wei-1gpibyda029a37b5)
 - [静态托管控制台](https://tcb.cloud.tencent.com/dev#/static-hosting)
 
+## 更新日志
+
+版本变更记录请查看 [CHANGELOG.md](./CHANGELOG.md)。
+
 ## License
 
 MIT License
