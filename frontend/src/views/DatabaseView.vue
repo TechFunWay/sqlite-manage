@@ -24,6 +24,21 @@ const toast = useToastStore()
 
 const sidebarRef = ref(null)
 const sidebarOpen = ref(false)
+// 桌面端侧边栏折叠状态（持久化到 localStorage）
+const sidebarCollapsed = ref(localStorage.getItem('sidebarCollapsed') === 'true')
+
+watch(sidebarCollapsed, (val) => {
+  localStorage.setItem('sidebarCollapsed', val ? 'true' : 'false')
+})
+
+// 顶栏菜单按钮：桌面端折叠/展开侧边栏，移动端开关抽屉
+function handleToggleSidebar() {
+  if (window.matchMedia('(min-width: 1024px)').matches) {
+    sidebarCollapsed.value = !sidebarCollapsed.value
+  } else {
+    sidebarOpen.value = !sidebarOpen.value
+  }
+}
 const activeTab = ref('data')
 const showCreateTable = ref(false)
 const fileInput = ref(null)
@@ -212,13 +227,14 @@ function formatSharePath(path) {
 
 <template>
   <div class="h-screen flex flex-col bg-slate-900">
-    <AppHeader @toggle-sidebar="sidebarOpen = !sidebarOpen" />
+    <AppHeader @toggle-sidebar="handleToggleSidebar" />
 
     <div class="flex-1 flex overflow-hidden">
       <!-- Sidebar - 桌面端常驻，移动端抽屉 -->
       <AppSidebar
         ref="sidebarRef"
         :open="sidebarOpen"
+        :collapsed="sidebarCollapsed"
         @close="sidebarOpen = false"
         @create-table="showCreateTable = true"
         @select-database="openBrowseModal"
