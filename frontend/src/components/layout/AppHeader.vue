@@ -92,11 +92,11 @@ async function handleLogout() {
 <template>
   <header class="h-14 bg-slate-800/80 backdrop-blur-xl border-b border-slate-700 flex items-center justify-between px-3 sm:px-4 relative z-40">
     <div class="flex items-center gap-2 sm:gap-4 min-w-0">
-      <!-- 移动端菜单按钮 -->
+      <!-- 菜单按钮：桌面端折叠/展开侧边栏，移动端开关抽屉 -->
       <button
         @click="emit('toggle-sidebar')"
-        class="p-2 -ml-1 rounded-lg text-slate-300 hover:text-slate-100 hover:bg-slate-700 transition-colors lg:hidden flex-shrink-0"
-        title="菜单"
+        class="p-2 -ml-1 rounded-lg text-slate-300 hover:text-slate-100 hover:bg-slate-700 transition-colors flex-shrink-0"
+        title="折叠/展开菜单"
       >
         <Menu class="w-5 h-5" />
       </button>

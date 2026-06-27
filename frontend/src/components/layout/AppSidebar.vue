@@ -16,6 +16,11 @@ defineProps({
   open: {
     type: Boolean,
     default: false
+  },
+  // 桌面端折叠状态：true 时侧边栏收起隐藏
+  collapsed: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -201,7 +206,8 @@ defineExpose({ addToRecent, loadRecentDatabases })
     :class="[
       'bg-slate-800/50 border-r border-slate-700 flex flex-col overflow-hidden',
       'fixed top-14 bottom-0 left-0 z-40 w-72 max-w-[85vw] transition-transform duration-300 ease-out',
-      'lg:static lg:top-0 lg:z-auto lg:max-w-none lg:translate-x-0 lg:transition-none',
+      'lg:static lg:top-0 lg:z-auto lg:max-w-none lg:translate-x-0 lg:transition-[width] lg:duration-300 lg:ease-out',
+      collapsed ? 'lg:w-0 lg:border-r-0' : 'lg:w-72',
       open ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
     ]"
   >
