@@ -50,7 +50,9 @@ chmod +x sqlite-manager 2>/dev/null || true
     fi
     
     cp frontend/dist/index.html "${DIR}/www/"
+    cp frontend/dist/manifest.webmanifest "${DIR}/www/"
     cp -r frontend/dist/sqlite-web "${DIR}/www/"
+    cp -r frontend/dist/icons "${DIR}/www/"
     
     find "${DIR}" -name ".DS_Store" -delete 2>/dev/null || true
     
