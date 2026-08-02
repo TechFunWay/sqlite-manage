@@ -309,6 +309,10 @@ func startServer(shouldOpenBrowser bool) {
 	r.GET("/", func(c *gin.Context) {
 		c.File(filepath.Join(publicDir, "index.html"))
 	})
+	r.GET("/manifest.webmanifest", func(c *gin.Context) {
+		c.Header("Content-Type", "application/manifest+json")
+		c.File(filepath.Join(publicDir, "manifest.webmanifest"))
+	})
 
 	// SPA 路由
 	spaRoutes := []string{"/login", "/register", "/database"}

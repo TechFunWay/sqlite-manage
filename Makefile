@@ -16,9 +16,11 @@ frontend:
 
 build: backend frontend
 	rm -rf backend/public
-	mkdir -p backend/public/sqlite-web backend/public/img
+	mkdir -p backend/public/sqlite-web backend/public/img backend/public/icons
 	cp frontend/dist/index.html backend/public/
+	cp frontend/dist/manifest.webmanifest backend/public/
 	cp -r frontend/dist/sqlite-web/* backend/public/sqlite-web/
+	cp -r frontend/dist/icons/* backend/public/icons/
 	cp -r frontend/public/img/* backend/public/img/ 2>/dev/null || true
 
 run: build
@@ -37,10 +39,12 @@ test: backend frontend
 	@-lsof -ti tcp:$(TEST_PORT) | xargs kill 2>/dev/null || true
 	@echo "📦 组装 $(TEST_DIR)/ 目录（同线上打包结构）..."
 	rm -rf $(TEST_DIR)
-	mkdir -p $(TEST_DIR)/public/sqlite-web $(TEST_DIR)/public/img
+	mkdir -p $(TEST_DIR)/public/sqlite-web $(TEST_DIR)/public/img $(TEST_DIR)/public/icons
 	cp backend/sqlite-manager $(TEST_DIR)/
 	cp frontend/dist/index.html $(TEST_DIR)/public/
+	cp frontend/dist/manifest.webmanifest $(TEST_DIR)/public/
 	cp -r frontend/dist/sqlite-web/* $(TEST_DIR)/public/sqlite-web/
+	cp -r frontend/dist/icons/* $(TEST_DIR)/public/icons/
 	cp -r frontend/public/img/* $(TEST_DIR)/public/img/ 2>/dev/null || true
 	@echo "🚀 启动: http://localhost:$(TEST_PORT)  (数据目录: $(TEST_DIR)/data)"
 	@echo "============================================"
