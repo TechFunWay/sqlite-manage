@@ -1,5 +1,5 @@
 appname               = techfunway-sqlite-manage
-version               = 1.4.0
+version               = 1.4.1
 display_name          = SQLite管理工具
 desc                  = SQLite Web 数据库管理工具 - 支持数据库浏览、表结构查看、数据编辑等功能
 platform              = x86
@@ -9,8 +9,14 @@ maintainer_url        = http://techfunway.wycto.cn/fnapp/sqlite-manage/
 distributor           = 科技智趣坊
 distributor_url       = http://techfunway.wycto.cn
 desktop_uidir         = ui
-desktop_applaunchname = techfunway-sqlite-manage.Application
+desktop_applaunchname = techfunway-sqlite-manage.App
 changelog             = """
+v1.4.1 更新内容
+
+  1. 修复移动端快捷方式图标
+    - 修复浏览器添加到主屏幕时快捷方式没有应用图标的问题
+    - 补充 Android、iOS 所需的图标资源和 Manifest 配置
+
 v1.4.0 更新内容
 
   1. 数据单元格快捷复制
