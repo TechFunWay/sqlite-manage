@@ -1,6 +1,6 @@
 {
     ".url": {
-        "techfunway-sqlite-manage.Application": {
+        "techfunway-sqlite-manage.App": {
             "title": "SQLite管理工具",
             "icon": "images/icon_{0}.png",
             "type": "url",
