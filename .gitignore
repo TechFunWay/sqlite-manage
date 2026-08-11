@@ -16,7 +16,6 @@
 .idea
 .DS_Store
 data.db
-.trae/documents
 /static/icons
 /static/downloads
 .vscode
@@ -29,11 +28,8 @@ upload
 databases
 data
 backend/public
-.claude/
-.codebuddy/
 backend/sqlite-manager
 
 # 测试/临时文件
-.playwright-mcp/
 browse-modal*.png
 /test/
