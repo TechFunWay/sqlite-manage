@@ -2,6 +2,24 @@
 
 一个现代化的 SQLite 数据库 Web 管理工具，类似于 DataGrip 和 Navicat，但更加简洁直观。
 
+## 下载与安装
+
+| 渠道 | 获取方式 |
+|---|---|
+| GitHub Releases | <https://github.com/TechFunWay/sqlite-manage/releases> —— 各平台压缩包、飞牛 `fpk` 安装包与 `docker-compose.yml` |
+| Gitee 镜像 | <https://gitee.com/TechFunWay/sqlite-manage> —— 代码自动同步自 GitHub，发行版待补 |
+| Docker 镜像 | `docker pull techfunways/sqlite-manage:latest`（amd64 / arm64 多平台） |
+| 飞牛 fnOS | 在飞牛应用中心手动安装 Releases 里的 `.fpk` 安装包（amd64 / arm64） |
+| 官网介绍页 | <https://techfunway.wycto.cn/fnapp/sqlite-manage> |
+
+> 默认端口 `8903`；数据默认是挂载目录下的 SQLite 单文件，备份即拷贝，恢复支持上传本地备份文件。
+
+## 界面预览
+
+| 桌面端 | 手机端 |
+|---|---|
+| ![桌面端](docs/screenshots/sqlite-manage-pc.png) | ![手机端](docs/screenshots/sqlite-manage-mobile.png) |
+
 ## 功能特性
 
 - 📂 **多数据库管理**: 同时打开和管理多个数据库
