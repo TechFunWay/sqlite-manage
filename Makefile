@@ -1,4 +1,4 @@
-.PHONY: all install backend frontend run dev test build clean release fnpack docker help
+.PHONY: all install backend frontend run dev test build clean release platforms fnpack docker docker-multi help
 
 all: install build
 
@@ -78,6 +78,11 @@ fnpack:
 docker:
 	./scripts/build-docker.sh
 
+# 多平台合并镜像（linux/amd64 + linux/arm64），默认只导出本地 OCI 归档，
+# 随发行目录分发；PUSH=1 时额外把同一份合并 manifest 推到 Docker Hub。
+docker-multi:
+	./scripts/build-docker-multi.sh
+
 help:
 	@echo "用法:"
 	@echo "  make build        构建项目 (本地运行)"
@@ -88,7 +93,8 @@ help:
 	@echo "  make release      一键打包所有 (平台+飞牛+Docker)"
 	@echo "  make platforms    只打包各平台"
 	@echo "  make fnpack       只打包飞牛应用"
-	@echo "  make docker       构建 Docker 多平台镜像"
+	@echo "  make docker       构建本机架构的 Docker 镜像"
+	@echo "  make docker-multi 构建多平台合并镜像 (PUSH=1 推 Docker Hub)"
 	@echo ""
 	@echo "  make clean        清理构建文件"
 

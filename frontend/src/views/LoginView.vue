@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { systemApi } from '../api'
-import { Database, Lock, User, LogIn, UserPlus } from 'lucide-vue-next'
+import { Database, Lock, User, LogIn, UserPlus, Server } from 'lucide-vue-next'
 import Button from '../components/common/Button.vue'
 import Input from '../components/common/Input.vue'
 
@@ -15,6 +15,10 @@ const password = ref('')
 const confirmPassword = ref('')
 const isRegisterMode = ref(false)
 const appVersion = ref('')
+const fnosEnabled = import.meta.env.VITE_FNOS_APP === 'true'
+const fnosBinding = ref(false)
+const fnosUsername = ref('')
+const fnosError = ref('')
 
 onMounted(async () => {
   await authStore.checkAuth()
@@ -38,7 +42,13 @@ async function handleSubmit() {
     return
   }
 
-  if (isRegisterMode.value) {
+  if (fnosBinding.value) {
+    if (isRegisterMode.value && password.value !== confirmPassword.value) {
+      return
+    }
+    const success = await authStore.fnosBind(username.value.trim(), password.value, isRegisterMode.value)
+    if (success) router.push('/database')
+  } else if (isRegisterMode.value) {
     if (password.value !== confirmPassword.value) {
       return
     }
@@ -51,6 +61,25 @@ async function handleSubmit() {
     if (success) {
       router.push('/')
     }
+  }
+}
+
+async function handleFnOSLogin() {
+	fnosError.value = ''
+  try {
+    const identity = await authStore.fnosIdentity()
+    fnosUsername.value = identity.fnosUsername
+    if (identity.bound && await authStore.fnosLogin()) {
+      router.push('/database')
+      return
+    }
+    fnosBinding.value = true
+    isRegisterMode.value = !identity.hasAdmin
+    username.value = ''
+    password.value = ''
+    confirmPassword.value = ''
+  } catch (error) {
+    fnosError.value = error.response?.data?.error || '无法获取飞牛账号信息'
   }
 }
 
@@ -76,7 +105,7 @@ function toggleMode() {
         <h1 class="text-2xl font-bold text-slate-100">SQLite Manager</h1>
         <p v-if="appVersion" class="text-xs text-slate-500 mt-1">v{{ appVersion }}</p>
         <p class="text-slate-400 mt-1">
-          {{ isRegisterMode ? '创建管理员账号' : '登录您的账号' }}
+          {{ fnosBinding ? `关联飞牛账号：${fnosUsername}` : (isRegisterMode ? '创建管理员账号' : '登录您的账号') }}
         </p>
       </div>
 
@@ -143,8 +172,20 @@ function toggleMode() {
           >
             <UserPlus v-if="isRegisterMode" class="w-4 h-4" />
             <LogIn v-else class="w-4 h-4" />
-            {{ isRegisterMode ? '创建账号' : '登录' }}
+            {{ fnosBinding ? (isRegisterMode ? '创建并关联' : '验证并关联') : (isRegisterMode ? '创建账号' : '登录') }}
           </Button>
+
+          <button
+            v-if="fnosEnabled && !fnosBinding"
+            type="button"
+            :disabled="authStore.loading"
+            class="min-h-11 w-full inline-flex items-center justify-center gap-2 rounded-lg border border-slate-600 bg-transparent px-4 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-700/50 focus:outline-none focus:ring-2 focus:ring-primary-500/60 disabled:cursor-not-allowed disabled:opacity-50"
+            @click="handleFnOSLogin"
+          >
+            <Server class="w-4 h-4" />
+            {{ authStore.loading ? '正在获取飞牛账号…' : '使用飞牛 NAS 登录' }}
+          </button>
+          <p v-if="fnosError" class="text-center text-sm text-red-400" role="alert">{{ fnosError }}</p>
         </form>
 
         <!-- Toggle Mode (only show when no admin exists) -->
@@ -153,13 +194,13 @@ function toggleMode() {
         <!-- First time message -->
         <div v-if="!authStore.hasAdmin && isRegisterMode" class="mt-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
           <p class="text-sm text-amber-400 text-center">
-            首次使用，请创建管理员账号
+            {{ fnosBinding ? '首次使用：创建管理员后会自动关联当前飞牛账号' : '首次使用，请创建管理员账号' }}
           </p>
         </div>
       </div>
 
       <!-- Footer -->
-      <p class="text-center text-slate-500 text-xs mt-6">
+      <p v-if="!fnosBinding" class="text-center text-slate-500 text-xs mt-6">
         忘记密码？请使用终端命令: <code class="bg-slate-800 px-1 py-0.5 rounded">./sqlite-manager reset-password</code>
       </p>
     </div>

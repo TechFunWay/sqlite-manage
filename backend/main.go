@@ -2,11 +2,13 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"database/sql"
 	"flag"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -14,9 +16,11 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"time"
 
 	"sqlite-manager/auth"
 	"sqlite-manager/config"
+	"sqlite-manager/fnos"
 	"sqlite-manager/handlers"
 	"sqlite-manager/telemetry"
 	"sqlite-manager/upgrade"
@@ -44,6 +48,10 @@ func main() {
 	uploadDir := flag.String("upload-dir", "", "上传目录 (默认: ./upload)")
 	shareDirs := flag.String("share-dirs", "", "共享目录 (冒号分隔)")
 	deviceType := flag.String("device-type", "", "设备类型 (如 fnos、docker)")
+	disableStats := flag.Bool("disable-stats", false, "禁用匿名使用统计上报（也可设置环境变量 DISABLE_STATS=1）")
+	fnosApp := flag.Bool("fnos-app", false, "启用飞牛统一网关登录（仅供 fnOS 应用中心安装包）")
+	gatewaySocket := flag.String("gateway-socket", "", "飞牛统一网关 Unix Socket 路径")
+	gatewayPrefix := flag.String("gateway-prefix", "/app/techfunway-sqlite-manage", "飞牛统一网关访问前缀")
 	noBrowser := flag.Bool("no-browser", false, "不自动打开浏览器")
 	flag.Parse()
 
@@ -121,6 +129,9 @@ func main() {
 	if err := auth.InitTables(); err != nil {
 		log.Fatalf("Failed to initialize auth tables: %v", err)
 	}
+	if err := fnos.InitTables(systemDB); err != nil {
+		log.Fatalf("Failed to initialize fnOS binding table: %v", err)
+	}
 
 	// 初始化升级表
 	upgrade.SetDB(systemDB)
@@ -133,13 +144,16 @@ func main() {
 		log.Printf("Warning: Upgrade failed: %v", err)
 	}
 
-	// 初始化并启动统计（静默，每60分钟上报一次）
-	telemetry.Init(AppVersion, *deviceType)
+	// 初始化并启动统计（静默，每60分钟上报一次；仅设备级信息，无主机名原文）
+	if *disableStats || os.Getenv("DISABLE_STATS") == "1" {
+		telemetry.SetDisabled()
+	}
+	telemetry.Init(AppVersion, *deviceType, config.DataDir)
 	telemetry.Start()
 	defer telemetry.Stop()
 
 	// 启动服务器
-	startServer(shouldOpenBrowser)
+	startServer(shouldOpenBrowser && !*fnosApp, *fnosApp, *gatewaySocket, *gatewayPrefix)
 }
 
 // parseConfig 解析配置
@@ -290,10 +304,15 @@ func initSystemDB() error {
 }
 
 // startServer 启动服务器
-func startServer(shouldOpenBrowser bool) {
+func startServer(shouldOpenBrowser, fnosApp bool, gatewaySocket, gatewayPrefix string) {
 	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.Default()
+	appPrefix := ""
+	if fnosApp {
+		appPrefix = "/" + strings.Trim(strings.TrimSpace(gatewayPrefix), "/")
+	}
+	root := r.Group(appPrefix)
 
 	r.Use(cors.New(cors.Config{
 		AllowAllOrigins:  true,
@@ -305,11 +324,11 @@ func startServer(shouldOpenBrowser bool) {
 
 	// 静态资源
 	publicDir := config.GetPublicDir()
-	r.Static("/sqlite-web", filepath.Join(publicDir, "sqlite-web"))
-	r.GET("/", func(c *gin.Context) {
+	root.Static("/sqlite-web", filepath.Join(publicDir, "sqlite-web"))
+	root.GET("/", func(c *gin.Context) {
 		c.File(filepath.Join(publicDir, "index.html"))
 	})
-	r.GET("/manifest.webmanifest", func(c *gin.Context) {
+	root.GET("/manifest.webmanifest", func(c *gin.Context) {
 		c.Header("Content-Type", "application/manifest+json")
 		c.File(filepath.Join(publicDir, "manifest.webmanifest"))
 	})
@@ -317,13 +336,13 @@ func startServer(shouldOpenBrowser bool) {
 	// SPA 路由
 	spaRoutes := []string{"/login", "/register", "/database"}
 	for _, route := range spaRoutes {
-		r.GET(route, func(c *gin.Context) {
+		root.GET(route, func(c *gin.Context) {
 			c.File(filepath.Join(publicDir, "index.html"))
 		})
 	}
 
 	// Auth API (不需要认证)
-	authGroup := r.Group("/api/auth")
+	authGroup := root.Group("/api/auth")
 	{
 		authGroup.POST("/login", handlers.Login)
 		authGroup.POST("/register", handlers.Register)
@@ -331,14 +350,23 @@ func startServer(shouldOpenBrowser bool) {
 	}
 
 	// 系统 API (不需要认证)
-	api := r.Group("/api")
+	api := root.Group("/api")
 	api.GET("/version", handlers.GetVersion)
 	api.GET("/upgrade-status", handlers.GetUpgradeStatus)
 
 	// 需要认证的 API
-	protectedAPI := r.Group("/api")
+	protectedAPI := root.Group("/api")
 	protectedAPI.Use(auth.AuthMiddleware())
 	{
+		// 赞赏支持计数（匿名设备统计，仅设备级信息，不含用户数据）
+		protectedAPI.POST("/donate/support", func(c *gin.Context) {
+			if !telemetry.SendEvent("donate_support") {
+				c.JSON(http.StatusBadGateway, gin.H{"error": "支持计数发送失败，请稍后再试"})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"ok": true})
+		})
+
 		protectedAPI.POST("/auth/change-password", handlers.ChangePassword)
 		protectedAPI.POST("/auth/logout", handlers.Logout)
 
@@ -382,12 +410,23 @@ func startServer(shouldOpenBrowser bool) {
 
 		protectedAPI.GET("/database/download", handlers.DownloadDatabase)
 	}
+	if fnosApp {
+		fnos.NewHandler(systemDB).RegisterRoutes(root.Group("/api/auth/fnos"))
+		if appPrefix != "" {
+			r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusTemporaryRedirect, appPrefix+"/") })
+		}
+	}
 
 	// SPA fallback
 	r.NoRoute(func(c *gin.Context) {
-		path := c.Request.URL.Path
+		requestPath := c.Request.URL.Path
+		if fnosApp && !strings.HasPrefix(requestPath, appPrefix+"/") {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		path := strings.TrimPrefix(requestPath, appPrefix)
 		if !strings.HasPrefix(path, "/api") && !strings.HasPrefix(path, "/sqlite-web") {
-			filePath := filepath.Join(publicDir, path)
+			filePath := filepath.Join(publicDir, strings.TrimPrefix(path, "/"))
 			if _, err := os.Stat(filePath); err == nil {
 				c.File(filePath)
 				return
@@ -408,15 +447,6 @@ func startServer(shouldOpenBrowser bool) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	go func() {
-		<-sigChan
-		log.Println("Shutting down...")
-		if systemDB != nil {
-			systemDB.Close()
-		}
-		os.Exit(0)
-	}()
-
 	// 打开浏览器
 	if shouldOpenBrowser {
 		go func() {
@@ -424,8 +454,49 @@ func startServer(shouldOpenBrowser bool) {
 		}()
 	}
 
-	if err := r.Run(":" + serverPort); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+	tcpListener, err := net.Listen("tcp", ":"+serverPort)
+	if err != nil {
+		log.Fatalf("Failed to start TCP server: %v", err)
+	}
+	tcpServer := &http.Server{Handler: r}
+	errChan := make(chan error, 2)
+	go func() { errChan <- tcpServer.Serve(tcpListener) }()
+
+	var gatewayServer *http.Server
+	if fnosApp {
+		if strings.TrimSpace(gatewaySocket) == "" {
+			log.Fatal("-gateway-socket is required when -fnos-app is enabled")
+		}
+		if err := os.MkdirAll(filepath.Dir(gatewaySocket), 0755); err != nil {
+			log.Fatalf("Failed to create gateway socket directory: %v", err)
+		}
+		_ = os.Remove(gatewaySocket)
+		gatewayListener, err := net.Listen("unix", gatewaySocket)
+		if err != nil {
+			log.Fatalf("Failed to start fnOS gateway server: %v", err)
+		}
+		if err := os.Chmod(gatewaySocket, 0660); err != nil {
+			log.Fatalf("Failed to set gateway socket permissions: %v", err)
+		}
+		defer os.Remove(gatewaySocket)
+		gatewayServer = &http.Server{Handler: r, ConnContext: fnos.MarkGatewayConnection}
+		go func() { errChan <- gatewayServer.Serve(gatewayListener) }()
+		log.Printf("fnOS gateway: %s%s/", gatewaySocket, appPrefix)
+	}
+
+	select {
+	case sig := <-sigChan:
+		log.Printf("Received %s, shutting down...", sig)
+	case err := <-errChan:
+		if err != nil && err != http.ErrServerClosed {
+			log.Printf("Server stopped: %v", err)
+		}
+	}
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_ = tcpServer.Shutdown(shutdownCtx)
+	if gatewayServer != nil {
+		_ = gatewayServer.Shutdown(shutdownCtx)
 	}
 }
 

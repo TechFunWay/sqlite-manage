@@ -183,7 +183,7 @@ func ExecuteQuery(c *gin.Context) {
 				break
 			}
 		}
-		
+
 		if !hasFrom {
 			// 在 WHERE 前插入 FROM 表名，如果没有 WHERE 则在语句末尾插入
 			whereIdx := -1
@@ -193,7 +193,7 @@ func ExecuteQuery(c *gin.Context) {
 					break
 				}
 			}
-			
+
 			if whereIdx > 0 {
 				sql = sql[:whereIdx] + "FROM \"" + currentTable + "\" " + sql[whereIdx:]
 			} else {
@@ -205,7 +205,7 @@ func ExecuteQuery(c *gin.Context) {
 				// 找到下一个空格或关键字
 				for spaceIdx < len(sql) {
 					ch := uint8(sql[spaceIdx])
-					if ch == ' ' || ch == 'W' || ch == 'O' || ch == 'G' || ch == 'L' || ch == 'O' || ch == 'R' || ch == 'D' || ch == 'B' || ch == 'E' || ch == 'N' || ch == 'T' || ch == 'C' || ch == 'A' || ch == 'S' {
+					if ch == ' ' || ch == 'W' || ch == 'O' || ch == 'G' || ch == 'L' || ch == 'R' || ch == 'D' || ch == 'B' || ch == 'E' || ch == 'N' || ch == 'T' || ch == 'C' || ch == 'A' || ch == 'S' {
 						break
 					}
 					spaceIdx++

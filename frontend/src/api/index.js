@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: `${import.meta.env.BASE_URL}api`,
   timeout: 30000
 })
 
@@ -28,7 +28,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !skipRedirectUrls.some(url => requestUrl.includes(url))) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      window.location.href = '/login'
+      window.location.href = `${import.meta.env.BASE_URL}login`
     }
     return Promise.reject(error)
   }
@@ -44,7 +44,11 @@ export const authApi = {
   login: (data) => api.post('/auth/login', data),
   register: (data) => api.post('/auth/register', data),
   changePassword: (data) => api.post('/auth/change-password', data),
-  logout: () => api.post('/auth/logout')
+  logout: () => api.post('/auth/logout'),
+  fnosIdentity: () => api.get('/auth/fnos/identity'),
+  fnosLogin: () => api.post('/auth/fnos/login'),
+  fnosBind: (data) => api.post('/auth/fnos/bind', data),
+  fnosRegister: (data) => api.post('/auth/fnos/register', data)
 }
 
 export const fileApi = {
