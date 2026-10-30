@@ -20,6 +20,13 @@ export const useAuthStore = defineStore('auth', () => {
     return CryptoJS.MD5(text).toString()
   }
 
+  function saveSession(data) {
+    token.value = data.token
+    user.value = data.user
+    localStorage.setItem('token', data.token)
+    localStorage.setItem('user', JSON.stringify(data.user))
+  }
+
   async function checkAuth() {
     try {
       const response = await authApi.check()
@@ -37,11 +44,7 @@ export const useAuthStore = defineStore('auth', () => {
       const hashedPassword = md5Hash(password)
       const response = await authApi.login({ username, password: hashedPassword })
       
-      token.value = response.data.token
-      user.value = response.data.user
-      
-      localStorage.setItem('token', response.data.token)
-      localStorage.setItem('user', JSON.stringify(response.data.user))
+      saveSession(response.data)
       
       toast.success('登录成功')
       return true
@@ -60,11 +63,7 @@ export const useAuthStore = defineStore('auth', () => {
       const hashedPassword = md5Hash(password)
       const response = await authApi.register({ username, password: hashedPassword })
       
-      token.value = response.data.token
-      user.value = response.data.user
-      
-      localStorage.setItem('token', response.data.token)
-      localStorage.setItem('user', JSON.stringify(response.data.user))
+      saveSession(response.data)
       
       toast.success('注册成功')
       return true
@@ -98,6 +97,46 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function fnosIdentity() {
+    const response = await authApi.fnosIdentity()
+    return response.data
+  }
+
+  async function fnosLogin() {
+    loading.value = true
+    try {
+      const response = await authApi.fnosLogin()
+      saveSession(response.data)
+      toast.success('飞牛 NAS 登录成功')
+      return true
+    } catch (error) {
+      if (error.response?.data?.code !== 'FNOS_BINDING_REQUIRED') {
+        toast.error(error.response?.data?.error || '飞牛 NAS 登录失败')
+      }
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fnosBind(username, password, createAdmin = false) {
+    loading.value = true
+    try {
+      const payload = { username, password: md5Hash(password) }
+      const response = createAdmin
+        ? await authApi.fnosRegister(payload)
+        : await authApi.fnosBind(payload)
+      saveSession(response.data)
+      toast.success(createAdmin ? '管理员创建并关联成功' : '飞牛账号关联成功')
+      return true
+    } catch (error) {
+      toast.error(error.response?.data?.error || '飞牛账号关联失败')
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function logout() {
     try {
       await authApi.logout()
@@ -123,6 +162,9 @@ export const useAuthStore = defineStore('auth', () => {
     checkAuth,
     login,
     register,
+    fnosIdentity,
+    fnosLogin,
+    fnosBind,
     changePassword,
     logout
   }

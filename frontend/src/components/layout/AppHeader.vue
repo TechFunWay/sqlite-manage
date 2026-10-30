@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDatabaseStore } from '../../stores/database'
 import { useAuthStore } from '../../stores/auth'
+import { useSupportStore } from '../../stores/support'
 import { systemApi } from '../../api'
 import { Database, LogOut, Plus, ChevronDown, X, Key, User, Info, Heart, Menu } from 'lucide-vue-next'
 import Button from '../common/Button.vue'
@@ -18,7 +19,7 @@ const emit = defineEmits(['toggle-sidebar'])
 const showDropdown = ref(false)
 const showUserMenu = ref(false)
 const showChangePasswordModal = ref(false)
-const showSupportModal = ref(false)
+const supportStore = useSupportStore()
 const appVersion = ref('')
 
 const oldPassword = ref('')
@@ -206,7 +207,7 @@ async function handleLogout() {
               修改密码
             </button>
             <button
-              @click="showSupportModal = true; showUserMenu = false"
+              @click="supportStore.show = true; showUserMenu = false"
               class="w-full flex items-center gap-2 px-4 py-3 text-sm text-slate-300 hover:bg-slate-700/50 transition-colors"
             >
               <Heart class="w-4 h-4 text-red-400" />
@@ -259,40 +260,6 @@ async function handleLogout() {
           >
             确认修改
           </Button>
-        </div>
-      </template>
-    </Modal>
-
-    <!-- Support Modal -->
-    <Modal :show="showSupportModal" title="☕ 请站长喝杯咖啡？" @close="showSupportModal = false">
-      <div class="text-center">
-        <p class="text-slate-400 text-sm mb-2">嘿～看到这里的都是真爱！🎉</p>
-        <p class="text-slate-400 text-sm mb-1">愿意支持的随意一下，感觉麻烦的直接跳过～</p>
-        <p class="text-slate-600 text-xs italic mb-4">反正我也就随便说说，你也就随便看看 😜</p>
-        
-        <div class="flex justify-center gap-6 mb-4">
-          <div class="text-center">
-            <img src="/img/weixin.png" alt="微信收款码" class="w-40 h-auto rounded-lg border border-slate-700" />
-            <span class="block mt-2 text-xs text-slate-500">微信</span>
-          </div>
-          <div class="text-center">
-            <img src="/img/zhifubao.jpg" alt="支付宝收款码" class="w-40 h-auto rounded-lg border border-slate-700" />
-            <span class="block mt-2 text-xs text-slate-500">支付宝</span>
-          </div>
-        </div>
-        
-        <div class="flex justify-center gap-4 pt-4 border-t border-slate-700">
-          <a href="http://techfunway.wycto.cn/" target="_blank" class="text-sm text-primary-400 hover:text-primary-300 hover:underline transition-colors">
-            🏠 博主首页
-          </a>
-          <a href="http://techfunway.wycto.cn/fnapp/sqlite-manage" target="_blank" class="text-sm text-primary-400 hover:text-primary-300 hover:underline transition-colors">
-            📖 应用文档
-          </a>
-        </div>
-      </div>
-      <template #footer>
-        <div class="flex justify-center">
-          <Button variant="secondary" @click="showSupportModal = false">关闭</Button>
         </div>
       </template>
     </Modal>

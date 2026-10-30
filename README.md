@@ -242,3 +242,13 @@ SQLite 数据库 (本地文件)
 ## License
 
 MIT License
+
+## 支持作者
+
+如果 SQLite 管理工具帮到了你，欢迎微信扫码请作者喝杯咖啡——金额随意，1 元也是心意：
+
+<p align="center">
+  <img src="frontend/public/img/donate-wechat.png" alt="微信收款码" width="240" />
+</p>
+
+应用内的赞赏入口（启动弹窗、顶部横幅、支持入口）随时可用；支持记录按版本号记忆，升级到新版本后会再次提醒。支持完全自愿，不支付不影响任何功能。

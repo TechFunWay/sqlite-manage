@@ -16,6 +16,7 @@
 .idea
 .DS_Store
 data.db
+.trae/documents
 /static/icons
 /static/downloads
 .vscode
@@ -28,8 +29,20 @@ upload
 databases
 data
 backend/public
+.claude/
+.codebuddy/
 backend/sqlite-manager
 
 # 测试/临时文件
+.playwright-mcp/
 browse-modal*.png
 /test/
+
+# ---------- 本地临时目录 ----------
+# 临时测试与调试文件统一放这里，目录内内容不入库（仅保留 .gitkeep 占位）
+tmp/*
+!tmp/.gitkeep
+
+# AI 工具本地目录
+.zcode/
+.mimocode/

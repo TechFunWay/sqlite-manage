@@ -73,10 +73,35 @@ echo "📦 创建压缩包..."
 cd "${RELEASE_DIR}"
 for dir in ${APP_NAME}-${VERSION}-*/; do
     name=$(basename "$dir")
-    tar -czf "${name}.tar.gz" --exclude='.DS_Store' "$dir"
+    # 清掉旧格式的包，Windows 用 zip，其余用 tar.gz
+    rm -f "${name}.tar.gz" "${name}.zip"
+    if [[ "${name}" == *-windows-* ]]; then
+        zip -qr "${name}.zip" "$dir" -x '*.DS_Store'
+    else
+        COPYFILE_DISABLE=1 tar -czf "${name}.tar.gz" --exclude='.DS_Store' "$dir"
+    fi
+    # 发行目录只留最终产物，未压缩的中间目录随手清掉
+    rm -rf "$dir"
 done
 cd "$PROJECT_DIR"
 
+# 更新日志、截图、compose 文件随发行目录分发，版本目录自包含
+[ -f CHANGELOG.md ] && cp CHANGELOG.md "${RELEASE_DIR}/CHANGELOG.md"
+
+if [ -d docs/screenshots ]; then
+    rm -rf "${RELEASE_DIR}/screenshots"
+    mkdir -p "${RELEASE_DIR}/screenshots"
+    cp docs/screenshots/*.png "${RELEASE_DIR}/screenshots/"
+    find "${RELEASE_DIR}/screenshots" -name '.DS_Store' -delete 2>/dev/null || true
+    (cd "${RELEASE_DIR}" && zip -qr "screenshots-v${VERSION}.zip" screenshots)
+    echo "📸 已打包截图 screenshots-v${VERSION}.zip"
+fi
+
+# 版本文件中的镜像 tag 钉死为当前版本，latest 文件原样分发；
+# 拷贝到目标主机后 docker compose up -d 即可运行
+sed "s|__VERSION__|v${VERSION}|" docker-compose.version.yaml > "${RELEASE_DIR}/docker-compose.yml"
+cp docker-compose.yaml "${RELEASE_DIR}/docker-compose.latest.yml"
+
 echo ""
 echo "✅ 完成!"
-ls -lh "${RELEASE_DIR}"/*.tar.gz | awk '{print "  " $NF " (" $5 ")"}'
+ls -lh "${RELEASE_DIR}"/ | awk 'NR>1 {print "  " $NF " (" $5 ")"}'

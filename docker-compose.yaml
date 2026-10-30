@@ -1,0 +1,39 @@
+version: '3.8'
+# SQLite 管理工具 —— latest 自动更新版
+#
+# 由 scripts/build-all.sh 复制为 release/v<版本>/docker-compose.latest.yml 分发。
+#
+# 用法：
+#   cd release/v<版本>
+#   docker compose -f docker-compose.latest.yml up -d
+# 使用 latest 标签镜像，并配合 Watchtower 每小时检查一次更新后自动重启；
+# 需要 techfunways/sqlite-manage:latest 可从镜像仓库拉取。
+services:
+  sqlite-manage:
+    image: techfunways/sqlite-manage:latest
+    container_name: sqlite-manage
+    ports:
+      - "8903:8903"
+    volumes:
+      # 数据库、上传文件与设备标识持久化在此目录
+      - ./data:/data
+    environment:
+      - SQLITE_DATA_DIR=/data
+      - SQLITE_UPLOAD_DIR=/data/upload
+      - SQLITE_WEB_DIR=/app/www
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+    labels:
+      # 只让 watchtower 关注打了此标签的容器
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: sqlite-manage-watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    # --interval 3600：每小时检查一次更新
+    # --cleanup：更新后删除旧镜像
+    # --label-enable：仅更新带有 enable=true 标签的容器
+    command: --interval 3600 --cleanup --label-enable
+    restart: unless-stopped

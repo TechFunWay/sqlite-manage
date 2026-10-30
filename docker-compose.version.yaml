@@ -1,0 +1,25 @@
+version: '3.8'
+# SQLite 管理工具 —— 固定版本（不自动更新）
+#
+# 本文件由 scripts/build-all.sh 把 __VERSION__ 替换为当前版本，
+# 复制为 release/v<版本>/docker-compose.yml 随发行目录分发。
+#
+# 用法：
+#   cd release/v<版本>
+#   docker compose up -d
+# 升级时切换到新版本的发行目录再执行一次即可，数据留在 ./data 中不丢。
+services:
+  sqlite-manage:
+    image: techfunways/sqlite-manage:__VERSION__
+    container_name: sqlite-manage
+    ports:
+      - "8903:8903"
+    volumes:
+      # 数据库、上传文件与设备标识持久化在此目录
+      - ./data:/data
+    environment:
+      - SQLITE_DATA_DIR=/data
+      - SQLITE_UPLOAD_DIR=/data/upload
+      - SQLITE_WEB_DIR=/app/www
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
